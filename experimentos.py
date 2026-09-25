@@ -270,6 +270,37 @@ def resumir_aumento_generalizacao(df: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(linhas)
 
 
+def parte_abstencao(P: dict) -> None:
+    """Quanto vale o detector de domínio: erro das imagens aceitas (score ≤ 1) contra o das
+    rejeitadas, com severidade e com campanha fora do treino."""
+    cat, X = P["catalogo"], P["X"]
+    niveis, alfa, camp = cat.nivel.to_numpy(), cat.alfa.to_numpy(), cat.campanha.to_numpy()
+    linhas = []
+    for c in ["hibrido", "mobilenet", "hibrido_mb"]:
+        testes = [("severidade", config.ORDEM_CLASSES[h], niveis != h, niveis == h) for h in av.niveis_interiores(cat)]
+        testes += [("campanha", k, camp != k, camp == k) for k in sorted(np.unique(camp))]
+        for teste, nome, m_tr, m_te in testes:
+            tr, te = np.flatnonzero(m_tr), np.flatnonzero(m_te)
+            modelo, _ = av._regressao_com_grupos(X[c][tr], alfa[tr], niveis[tr])
+            pred = np.clip(modelo.predict(X[c][te]), 0, 1)
+            score = av.DetectorDominio().ajustar(X[c][tr]).pontuar(X[c][te])
+            for p, a, s in zip(pred, alfa[te], score):
+                linhas.append({"conjunto": c, "teste": teste, "retirado": nome, "erro_espiras": abs(p - a) * config.TOTAL_ESPIRAS,
+                               "score_dominio": s, "aceita": bool(s <= 1)})
+        log(f"abstenção {c}")
+    df = pd.DataFrame(linhas)
+    df.to_csv(DIR / "abstencao_por_imagem.csv", index=False)
+    resumo = []
+    for (c, teste), g in df.groupby(["conjunto", "teste"], sort=False):
+        ac, rj = g[g.aceita], g[~g.aceita]
+        resumo.append({"conjunto": c, "teste": teste, "n": len(g), "fracao_aceita": len(ac) / len(g),
+                       "mae_todas": g.erro_espiras.mean(),
+                       "mae_aceitas": ac.erro_espiras.mean() if len(ac) else np.nan,
+                       "mae_rejeitadas": rj.erro_espiras.mean() if len(rj) else np.nan,
+                       "spearman_score_erro": spearmanr(g.score_dominio, g.erro_espiras).statistic})
+    pd.DataFrame(resumo).round(3).to_csv(DIR / "abstencao_resumo.csv", index=False)
+
+
 def parte_estatistica(P: dict) -> None:
     """Comparações pareadas por severidade retirada (7 pares) e IC bootstrap da média entre
     severidades. Com 7 pares, o menor p bilateral possível do Wilcoxon é 0,016."""
@@ -341,7 +372,7 @@ def parte_sensibilidade(P: dict) -> None:
 
 
 PARTES = {"zoo": parte_zoo, "aninhada": parte_aninhada, "robustez": parte_robustez, "aumento": parte_aumento,
-          "aumento_generalizacao": parte_aumento_generalizacao,
+          "aumento_generalizacao": parte_aumento_generalizacao, "abstencao": parte_abstencao,
           "estatistica": parte_estatistica, "temporal": parte_temporal, "sensibilidade": parte_sensibilidade}
 
 

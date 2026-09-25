@@ -135,6 +135,16 @@ confirmado.
 Extrapolação: sem a campanha A, o saudável é previsto com α ≈ 0,27; sem a campanha D, tudo
 satura em α = 1.
 
+**Quanto vale o detector de domínio** (`saida/experimentos/abstencao_resumo.csv`, híbrido):
+
+| Teste | Rejeitadas | Erro das aceitas | Erro das rejeitadas | Spearman escore × erro |
+|---|---:|---:|---:|---:|
+| Campanha fora do treino (as 4, incl. extrapolação) | 86% | 38 espiras | **323 espiras** | 0,70 |
+| Severidade fora do treino (campanha conhecida) | 34% | 12,6 espiras | 18,8 espiras | 0,26 |
+
+O detector responde sobretudo a mudanças de cena, e é aí que ele barra os erros graves. Com
+severidade nova numa campanha conhecida, a separação é fraca.
+
 ### 2.5 Robustez e aumento de dados
 
 **Filtro de mediana no índice de paleta** (adotado como padrão):

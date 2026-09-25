@@ -187,6 +187,25 @@ def gerar_claude(r: dict) -> tuple[str, dict]:
     return texto, meta
 
 
+def gerar_claude_seguro(r: dict) -> tuple[str, dict]:
+    """Como gerar_claude, mas uma falha da API vira um relatório vazio com o erro anotado
+    (o verificador o reprova) em vez de interromper o lote. O SDK já repete sozinho erros
+    transitórios (429, 5xx, conexão) duas vezes antes de chegar aqui."""
+    import anthropic
+
+    base = {"modelo_solicitado": MODELO_CLAUDE, "versao_prompt": VERSAO_PROMPT}
+    try:
+        return gerar_claude(r)
+    except anthropic.AuthenticationError:
+        return "", {**base, "erro": "credencial ausente ou inválida"}
+    except anthropic.RateLimitError:
+        return "", {**base, "erro": "limite de requisições atingido"}
+    except anthropic.APIStatusError as e:
+        return "", {**base, "erro": f"erro da API ({e.status_code})"}
+    except anthropic.APIConnectionError:
+        return "", {**base, "erro": "falha de conexão"}
+
+
 # -------------------------------------------------------------- verificador ----
 _NUMERO = re.compile(r"(?<![\w.,])\d+(?:[.,]\d+)?(?![\w])")
 _NUMERACAO = re.compile(r"^\s*(#+\s*)?\d+[.)]?\s", re.MULTILINE)

@@ -252,10 +252,12 @@ def main() -> None:
         rng = np.random.default_rng(config.SEMENTE)
         amostra = rng.choice(len(registros), size=min(args.n_llm, len(registros)), replace=False)
         resultados = []
-        for i in amostra:
+        for k, i in enumerate(amostra, start=1):
             r = registros[i]
-            texto, meta = rl.gerar_claude(r)
+            texto, meta = rl.gerar_claude_seguro(r)
             v = rl.verificar(texto, r)
+            log(f"Claude {k}/{len(amostra)} {r['identificacao']['arquivo']}: "
+                f"{'aprovado' if v['aprovado'] else 'reprovado'}{' (' + meta['erro'] + ')' if 'erro' in meta else ''}")
             nome = r["identificacao"]["arquivo"].replace(".bmp", "")
             (config.SAIDA / "relatorios" / f"claude_{nome}.md").write_text(texto, encoding="utf-8")
             resultados.append({**meta, "arquivo": r["identificacao"]["arquivo"], "aprovado": v["aprovado"],

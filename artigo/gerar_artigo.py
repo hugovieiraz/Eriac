@@ -196,6 +196,14 @@ def main() -> None:
     m["SensMAEMin"], m["SensMAEMax"] = br(bp.mae_blocos.min()), br(bp.mae_blocos.max())
     m["SensFUmMin"] = br(bp.f1_blocos.min(), 3)
 
+    ab = pd.read_csv(E / "abstencao_resumo.csv").set_index(["conjunto", "teste"])
+    m["AbstCampAceitas"] = br(ab.loc[("hibrido", "campanha"), "mae_aceitas"], 0)
+    m["AbstCampRejeitadas"] = br(ab.loc[("hibrido", "campanha"), "mae_rejeitadas"], 0)
+    m["AbstCampFracRejeitada"] = pct(1 - ab.loc[("hibrido", "campanha"), "fracao_aceita"])
+    m["AbstCampRho"] = br(ab.loc[("hibrido", "campanha"), "spearman_score_erro"], 2)
+    m["AbstSevAceitas"] = br(ab.loc[("hibrido", "severidade"), "mae_aceitas"])
+    m["AbstSevRejeitadas"] = br(ab.loc[("hibrido", "severidade"), "mae_rejeitadas"])
+
     ocl = json.loads((S / "oclusao_resumo.json").read_text(encoding="utf-8"))
     for mod, nome in (("mobilenet", "Mob"), ("indicadores", "Ind")):
         v = [d[mod]["fracao_da_queda_dentro_da_roi"] for d in ocl.values()]

@@ -1,0 +1,7 @@
+conjunto,teste,n,fracao_aceita,mae_todas,mae_aceitas,mae_rejeitadas,spearman_score_erro
+hibrido,severidade,193,0.663,14.719,12.637,18.818,0.261
+hibrido,campanha,255,0.141,282.872,38.476,323.047,0.703
+mobilenet,severidade,193,0.56,17.822,18.299,17.217,-0.012
+mobilenet,campanha,255,0.0,89.539,,89.539,0.597
+hibrido_mb,severidade,193,0.56,16.8,15.964,17.862,0.085
+hibrido_mb,campanha,255,0.0,217.993,,217.993,0.8

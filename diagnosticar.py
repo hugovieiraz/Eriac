@@ -63,7 +63,7 @@ def main() -> None:
         r = d.diagnosticar(rgb, arq.name, tam)
         texto, meta = r["relatorio"], {"backend": "deterministico"}
         if args.llm == "claude":
-            texto, meta = rl.gerar_claude(r["registro"])
+            texto, meta = rl.gerar_claude_seguro(r["registro"])
             meta["backend"] = "claude"
         verif = rl.verificar(texto, r["registro"])
         base = saida / arq.stem

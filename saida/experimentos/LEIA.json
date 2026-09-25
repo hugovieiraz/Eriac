@@ -1,11 +1,6 @@
 {
  "partes": [
-  "zoo",
-  "aninhada",
-  "estatistica",
-  "robustez",
-  "sensibilidade",
-  "temporal"
+  "abstencao"
  ],
  "regressores": [
   "ridge",

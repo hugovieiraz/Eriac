@@ -58,6 +58,9 @@ def main() -> None:
     np.save(config.CACHE / "dinov2_limpo.npy", extrair(modelo, imagens))
     for tipo in ft.PERTURBACOES:
         np.save(config.CACHE / f"dinov2_{tipo}.npy", extrair(modelo, ft.perturbar(imagens, tipo)))
+        # Cópias para aumento de dados de treino (intensidade e semente diferentes das do teste).
+        copias = ft.perturbar(imagens, tipo, semente=config.SEMENTE + 1, intensidade=0.6)
+        np.save(config.CACHE / f"dinov2_aumento_{tipo}.npy", extrair(modelo, copias))
     meta = {
         "repositorio": REPO, "commit_do_hub": commit, "diretorio_hub": str(repo_dir),
         "pesos": {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in pesos},

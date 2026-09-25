@@ -7,3 +7,13 @@ __pycache__/
 .pytest_cache/
 saida_log.txt
 *.pyc
+
+# Modelo de aplicação: recriado no primeiro uso (depende da versão do scikit-learn)
+modelos/
+
+# Saída padrão do diagnosticar.py
+diagnosticos/
+
+# Logs de execução
+saida/**/log_*.txt
+saida/log_*.txt

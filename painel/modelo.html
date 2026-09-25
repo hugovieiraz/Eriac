@@ -203,6 +203,9 @@ footer { margin-top: 40px; padding-top: 14px; border-top: 1px solid var(--grid);
     <a href="#imagens">Explorar imagens</a>
     <a href="#robustez">Robustez</a>
     <a href="#verificador">Verificador</a>
+    <a href="#modelos" data-opcional="zoo">Modelos e aumento</a>
+    <a href="#temporal" data-opcional="deriva">Deriva temporal</a>
+    <a href="#motor" data-opcional="motor">Motor</a>
   </nav>
 
   <section id="validacao">
@@ -292,6 +295,38 @@ footer { margin-top: 40px; padding-top: 14px; border-top: 1px solid var(--grid);
     </div>
   </section>
 
+  <section id="modelos" data-opcional="zoo" hidden>
+    <h2>Seleção de modelos e aumento de dados</h2>
+    <p class="lead">Erro com severidade não vista (espiras) para cada combinação de features e regressor. Comparar muitos modelos no mesmo teste favorece o vencedor por acaso; o número honesto é o da seleção aninhada, que escolhe o modelo sem ver a severidade retirada.</p>
+    <div class="card">
+      <p class="hint" id="aninhada-txt"></p>
+      <div class="legend" id="lg-zoo"></div>
+      <div class="chart" id="c-zoo"></div>
+      <details><summary>Ver tabela</summary><div class="tbl" id="t-zoo"></div></details>
+    </div>
+    <div class="card" id="card-aumento">
+      <p class="lead">Treinar com cópias perturbadas das imagens (ruído, desfoque, translação e rotação mais fracos que os do teste). Erro em espiras.</p>
+      <div class="legend" id="lg-aum"></div>
+      <div class="chart" id="c-aum"></div>
+      <details><summary>Ver tabela</summary><div class="tbl" id="t-aum"></div></details>
+    </div>
+  </section>
+
+  <section id="temporal" data-opcional="deriva" hidden>
+    <h2>Deriva dentro de cada gravação</h2>
+    <p class="lead">Correlação de Spearman entre a ordem do quadro e o índice médio de paleta (o equipamento aquece ou esfria durante a gravação?) e quanto o α previsto muda do primeiro ao último quadro.</p>
+    <div class="card"><div class="tbl" id="t-deriva"></div></div>
+  </section>
+
+  <section id="motor" data-opcional="motor" hidden>
+    <h2>O mesmo pipeline no motor de indução</h2>
+    <p class="lead">369 termogramas do motor do mesmo dataset, 11 condições. Severidade do estator definida como a fração total de espiras em curto (porcentagem por fase × fases ÷ 3), em pontos percentuais.</p>
+    <div class="grid2">
+      <div class="card"><h3 style="margin:0;font-size:15px">Classificação das 11 condições (F1-macro)</h3><div class="tbl" id="t-motor-clf"></div></div>
+      <div class="card"><h3 style="margin:0;font-size:15px">Severidade do estator (erro em pontos percentuais)</h3><div class="tbl" id="t-motor-sev"></div></div>
+    </div>
+  </section>
+
   <footer id="rodape"></footer>
 </div>
 <div id="tip" hidden></div>
@@ -302,9 +337,13 @@ const D = /*__DADOS__*/null;
 const NOMES = {
   trivial: "Miniatura 16×12", posicao: "Posição (controle)", indicadores_v1: "Indicadores v1",
   indicadores: "Indicadores de paleta", mobilenet: "MobileNetV3", dinov2: "DINOv2",
-  hibrido_v1: "DINOv2 + ind. v1", hibrido: "DINOv2 + ind. de paleta"
+  hibrido_v1: "DINOv2 + ind. v1", hibrido: "DINOv2 + ind. de paleta", hibrido_mb: "MobileNet + ind. de paleta",
+  ind_invariantes: "Ind. sem cena", hibrido_inv: "DINOv2 + ind. sem cena", empilhado: "Média de modelos",
+  indicadores_filtrados: "Indicadores de paleta", hibrido_mb_f: "MobileNet + ind. de paleta"
 };
-const ORDEM = ["trivial", "posicao", "indicadores_v1", "indicadores", "mobilenet", "dinov2", "hibrido_v1", "hibrido"];
+const ORDEM = ["trivial", "posicao", "indicadores_v1", "indicadores", "mobilenet", "dinov2", "hibrido_v1", "hibrido", "hibrido_mb"];
+const REGS = { ridge: "Ridge", pls: "PLS", pca_ridge: "PCA + Ridge", kernel_ridge: "Kernel Ridge", svr: "SVR", gp: "Proc. gaussiano",
+               media_3: "DINOv2 + MobileNet + ind.", media_dino_mb: "DINOv2 + MobileNet" };
 const REC = { sem_indicio: "Sem indício", baixa: "Baixa", intermediaria: "Intermediária", elevada: "Elevada",
               fora_do_dominio: "Fora do domínio", inconsistente: "Inconsistente" };
 const PERT = { nenhuma: "Nenhuma", ruido: "Ruído σ = 8", desfoque: "Desfoque σ = 1,5", translacao: "Translação 12 px", rotacao: "Rotação 4°" };
@@ -550,7 +589,7 @@ function interpolacaoLinha(conds) {
 
 // ------------------------------------------------------------------ campanha não vista
 function campanha() {
-  const conj = ["trivial", "posicao", "indicadores", "mobilenet", "dinov2", "hibrido"];
+  const conj = ["trivial", "posicao", "indicadores", "mobilenet", "dinov2", "hibrido", "hibrido_mb"];
   const conds = D.classes;
   const campDe = (cd) => D.campanha.find((x) => x.condicao === cd);
   const grupos = [];
@@ -751,6 +790,72 @@ function verificador() {
     ordem.map((k) => D.verificador.find((x) => x.mutacao === k)).filter(Boolean).map((r) => [MUT[r.mutacao], String(r.n), pct(r.reprovados, 1), pct(r.com_alerta)]), [1, 2, 3]);
 }
 
+// ------------------------------------------------------------------ seções opcionais
+function modelos() {
+  if (!D.zoo) return;
+  // As médias de modelos ("empilhado|media_*") viram linhas próprias na coluna Ridge,
+  // que é o regressor dos seus membros.
+  const chave = (z) => { const [f, r] = z.conjunto.split("|"); return r.startsWith("media") ? [r, "ridge"] : [f, r]; };
+  const linhas = [...new Set(D.zoo.map((z) => chave(z)[0]))];
+  const cols = ["ridge", "pls", "pca_ridge", "gp", "svr", "kernel_ridge"].filter((c) => D.zoo.some((z) => chave(z)[1] === c));
+  const achar = (l, c) => D.zoo.find((z) => { const [a, b] = chave(z); return a === l && b === c; });
+  const val = (l, c) => achar(l, c)?.mae_interp;
+  NOMES.media_3 = "Média DINOv2 + MobileNet + ind."; NOMES.media_dino_mb = "Média DINOv2 + MobileNet";
+  if (D.aninhada) {
+    const m = D.aninhada.reduce((a, b) => a + b.mae_espiras, 0) / D.aninhada.length;
+    document.getElementById("aninhada-txt").textContent =
+      `Seleção aninhada (escolhe entre todas as combinações sem ver a severidade retirada): ${fmt(m, 1)} espiras em média.`;
+  }
+  legendaRampa(document.getElementById("lg-zoo"), LIM_MAE, "Erro (espiras)", (v) => fmt(v, 0));
+  mapaCalor(document.getElementById("c-zoo"), {
+    linhas, colunas: cols, limites: LIM_MAE, rotuloLinha: (l) => NOMES[l] || l,
+    cabecalho: (c, cw) => (cw < 90 ? (REGS[c] || c).split(" ")[0] : REGS[c] || c),
+    valor: val, formatar: (v) => fmt(v, 0),
+    dica: (l, c, v) => {
+      const z = achar(l, c);
+      return [{ t: `${fmt(v, 1)} espiras`, forte: true }, { t: `${NOMES[l] || l} · ${REGS[c] || c}` },
+              { t: `pior nível ${fmt(z.pior_interp, 1)} · campanha nova ${fmt(z.mae_campanha_BC, 1)} espiras` },
+              { t: `intervalo de 90% cobriu ${pct(z.cobertura_90)} (±${fmt(z.meia_largura_espiras, 0)} espiras)` }];
+    },
+  });
+  tabela(document.getElementById("t-zoo"), ["Features", "Regressor", "Severidade nova", "Pior nível", "Campanha nova", "Cobertura 90%"],
+    [...D.zoo].sort((a, b) => a.mae_interp - b.mae_interp).map((z) => {
+      const [l, c] = chave(z);
+      return [NOMES[l] || l, REGS[c] || c, fmt(z.mae_interp, 1), fmt(z.pior_interp, 1), fmt(z.mae_campanha_BC, 1), pct(z.cobertura_90)];
+    }), [2, 3, 4, 5]);
+  if (!D.aumento) { document.getElementById("card-aumento").hidden = true; return; }
+  const colsA = ["nenhuma", "ruido", "desfoque", "translacao", "rotacao", "severidade", "campanha"];
+  const rot = { ...PERT, severidade: "Severidade nova", campanha: "Campanha nova" };
+  const linhasA = D.aumento.map((a) => `${a.conjunto}|${a.treino}`).filter((v, i, arr) => arr.indexOf(v) === i);
+  const nomeA = (l) => { const [c, t] = l.split("|"); return `${NOMES[c] || c} · ${t === "aumentado" ? "com aumento" : "sem aumento"}`; };
+  const valA = (l, c) => D.aumento.find((a) => `${a.conjunto}|${a.treino}` === l && a.perturbacao === c)?.mae_espiras;
+  legendaRampa(document.getElementById("lg-aum"), LIM_MAE, "Erro (espiras)", (v) => fmt(v, 0));
+  mapaCalor(document.getElementById("c-aum"), {
+    linhas: linhasA, colunas: colsA, limites: LIM_MAE, rotuloLinha: nomeA, valor: valA, formatar: (v) => fmt(v, 1),
+    cabecalho: (c, cw) => (cw < 100 ? rot[c].split(" ")[0] : rot[c]),
+    dica: (l, c, v) => [{ t: `${fmt(v, 1)} espiras`, forte: true }, { t: `${nomeA(l)} · ${rot[c]}` }],
+  });
+  tabela(document.getElementById("t-aum"), ["Modelo", ...colsA.map((c) => rot[c])],
+    linhasA.map((l) => [nomeA(l), ...colsA.map((c) => { const v = valA(l, c); return v === undefined ? "–" : fmt(v, 1); })]),
+    colsA.map((_, i) => i + 1));
+}
+function deriva() {
+  if (!D.deriva) return;
+  tabela(document.getElementById("t-deriva"), ["Condição", "Quadros", "Spearman índice × ordem", "p", "Variação do α previsto (espiras)"],
+    D.deriva.map((d) => [d.condicao, String(d.n), fmt(d.spearman_indice, 2), fmt(d.p_indice, 3), fmt(d.variacao_espiras_na_gravacao, 1)]), [1, 2, 3, 4]);
+}
+function motor() {
+  if (!D.motor) return;
+  const m = D.motor;
+  const nomesM = { trivial: "Miniatura 16×12", posicao: "Posição (controle)", indicadores: "Indicadores de paleta", mobilenet: "MobileNetV3", hibrido_mb: "MobileNet + ind." };
+  const conjs = [...new Set(m.classificacao.map((x) => x.conjunto))];
+  tabela(document.getElementById("t-motor-clf"), ["Conjunto", "Aleatória", "Blocos"],
+    conjs.map((c) => [nomesM[c] || c, ...["aleatoria", "blocos"].map((e) => fmt(m.classificacao.find((x) => x.conjunto === c && x.esquema === e).f1_macro, 3))]), [1, 2]);
+  tabela(document.getElementById("t-motor-sev"), ["Conjunto", "Blocos", "Severidade nova", "Pior nível"],
+    conjs.map((c) => { const b = m.blocos.find((x) => x.conjunto === c), n = m.nao_vista.find((x) => x.conjunto === c);
+      return [nomesM[c] || c, fmt(b.mae_pontos_percentuais, 2), fmt(n.mae_medio_pp, 2), fmt(n.pior_pp, 2)]; }), [1, 2, 3]);
+}
+
 // ------------------------------------------------------------------ montagem
 function alternar(ids, aoMudar) {
   for (const [id, valor] of ids) {
@@ -760,7 +865,7 @@ function alternar(ids, aoMudar) {
     });
   }
 }
-function tudo() { tiles(); validacao(); interpolacao(); campanha(); explorar(); robustez(); verificador(); }
+function tudo() { tiles(); validacao(); interpolacao(); campanha(); explorar(); robustez(); verificador(); modelos(); deriva(); motor(); }
 
 if (!D) {
   document.querySelector(".page").replaceChildren(el("p", {}, null, "Dados ausentes: gere o painel com gerar_painel.py."));
@@ -768,6 +873,7 @@ if (!D) {
   alternar([["v-f1", "f1"], ["v-mae", "mae"]], (v) => { metricaVal = v; validacao(); });
   alternar([["r-mae", "mae"], ["r-f1", "f1"], ["r-ood", "ood"]], (v) => { metricaRob = v; robustez(); });
   prepararFiltros();
+  document.querySelectorAll("[data-opcional]").forEach((e) => { e.hidden = !D[e.dataset.opcional]; });
   tudo();
   let espera;
   addEventListener("resize", () => { clearTimeout(espera); espera = setTimeout(tudo, 150); });

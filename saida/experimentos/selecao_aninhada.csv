@@ -1,0 +1,8 @@
+condicao_retirada,escolhido,mae_interno_escolhido,top3_interno,alfa_real,alfa_previsto_medio,mae_espiras
+SC80,hibrido|ridge,14.124046718361527,hibrido|ridge ; hibrido_inv|ridge ; hibrido_inv|pls,0.13333333333333333,0.09028599595517633,25.828402426894193
+SC160,dinov2|ridge,17.362608756201386,dinov2|ridge ; hibrido_inv|pls ; hibrido_inv|ridge,0.26666666666666666,0.28636157512664795,23.178974390029914
+SC240,empilhado|media_dino_mb,11.732413570302654,empilhado|media_dino_mb ; hibrido_inv|pls ; hibrido_inv|ridge,0.4,0.44303415242665634,25.820491455993853
+SC320,hibrido_mb|ridge,13.822611345168193,hibrido_mb|ridge ; empilhado|media_dino_mb ; hibrido_mb|pca_ridge,0.5333333333333333,0.49518089002832694,22.891465983003837
+SC400,hibrido_inv|ridge,14.02609497161467,hibrido_inv|ridge ; empilhado|media_dino_mb ; hibrido_mb|pls,0.6666666666666666,0.6641987315670321,12.063443551566289
+SC480,hibrido_inv|ridge,14.754265763611343,hibrido_inv|ridge ; hibrido|ridge ; empilhado|media_3,0.8,0.8026202513228199,6.883665816047372
+SC560,hibrido_inv|ridge,13.849762721803573,hibrido_inv|ridge ; hibrido|ridge ; hibrido|pls,0.9333333333333333,0.9132158782747022,12.747481049694901

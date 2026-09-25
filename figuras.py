@@ -28,6 +28,7 @@ NOMES = {
     "trivial": "Trivial 16x12", "posicao": "Posição (controle)", "indicadores_v1": "Indicadores v1",
     "indicadores": "Indicadores (paleta)", "mobilenet": "MobileNetV3", "dinov2": "DINOv2",
     "hibrido_v1": "DINOv2 + ind. v1", "hibrido": "DINOv2 + ind. (paleta)",
+    "hibrido_mb": "MobileNet + ind. (paleta)",
 }
 
 

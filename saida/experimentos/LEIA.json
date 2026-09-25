@@ -1,0 +1,18 @@
+{
+ "partes": [
+  "zoo",
+  "aninhada",
+  "estatistica",
+  "robustez",
+  "sensibilidade",
+  "temporal"
+ ],
+ "regressores": [
+  "ridge",
+  "pls",
+  "pca_ridge",
+  "kernel_ridge",
+  "svr",
+  "gp"
+ ]
+}

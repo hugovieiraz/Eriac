@@ -12,8 +12,13 @@ import relatorio_llm as rl
 from paleta import ConversorPaleta
 
 
+TEM_DATASET = config.DATASET.exists() and any(config.DATASET.glob("*/*.bmp"))
+
+
 @pytest.fixture(scope="module")
 def catalogo():
+    if not TEM_DATASET:
+        pytest.skip("dataset ausente (veja o README para baixar)")
     return dados.construir_catalogo()
 
 

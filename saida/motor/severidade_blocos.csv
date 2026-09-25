@@ -1,0 +1,6 @@
+conjunto,mae_pontos_percentuais,mae_dp,f1_estator,cobertura_90,meia_largura_pp
+trivial,1.4718,0.2096,0.9099,0.9285,3.2039
+posicao,4.4536,0.5576,0.5479,0.9016,8.2538
+indicadores,1.3137,0.2322,0.9733,0.9029,3.185
+mobilenet,0.9733,0.1749,0.9899,0.9265,2.4468
+hibrido_mb,0.846,0.1731,1.0,0.9257,2.3024

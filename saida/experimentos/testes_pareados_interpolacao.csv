@@ -1,0 +1,8 @@
+a,b,diferenca_media_espiras,niveis_a_melhor,n_niveis,p_wilcoxon
+hibrido|ridge,indicadores|ridge,-24.0499,6,7,0.0312
+hibrido|ridge,dinov2|ridge,-6.5879,7,7,0.0156
+hibrido|ridge,mobilenet|ridge,-3.224,4,7,0.5781
+hibrido_mb|ridge,hibrido|ridge,2.2296,3,7,0.6875
+empilhado|media_3,hibrido|ridge,5.297,1,7,0.0469
+hibrido_inv|ridge,hibrido|ridge,-1.2448,2,7,0.6875
+dinov2|ridge,indicadores|ridge,-17.4621,6,7,0.0469

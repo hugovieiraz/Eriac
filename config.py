@@ -39,6 +39,7 @@ CAMPANHAS_ESPERADAS = {
 }
 
 N_BLOCOS = 5   # blocos temporais contíguos por classe
+FILTRO_MEDIANA = 5  # filtro de mediana no mapa de índice de paleta (robustez a ruído)
 PURGA = 1      # quadros vizinhos à fronteira do bloco de teste removidos do treino
 
 # Grades de hiperparâmetros, escolhidos por validação interna (aninhada).

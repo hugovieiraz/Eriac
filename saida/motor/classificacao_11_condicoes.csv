@@ -1,0 +1,11 @@
+conjunto,esquema,f1_macro,f1_macro_dp
+trivial,aleatoria,0.9588,0.0146
+trivial,blocos,0.9417,0.0618
+posicao,aleatoria,0.6369,0.0199
+posicao,blocos,0.5423,0.0395
+indicadores,aleatoria,0.9967,0.0074
+indicadores,blocos,0.9921,0.0113
+mobilenet,aleatoria,0.9943,0.0078
+mobilenet,blocos,0.9883,0.0067
+hibrido_mb,aleatoria,0.9971,0.0064
+hibrido_mb,blocos,0.9974,0.0058

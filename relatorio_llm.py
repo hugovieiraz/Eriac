@@ -67,7 +67,7 @@ def recomendacao(alfa: float, dentro_dominio: bool, concordancia: bool) -> dict:
     raise ValueError(alfa)
 
 
-def registro_diagnostico(cat_linha, oof_linha, ind_linha) -> dict:
+def registro_diagnostico(cat_linha, oof_linha, ind_linha, resolucao: list[int] | None = None) -> dict:
     """Monta o registro que o LLM recebe. O rótulo verdadeiro NÃO entra aqui."""
     defeito = oof_linha.prob_defeito >= 0.5
     alfa = round(float(oof_linha.alfa_previsto), 3)
@@ -81,7 +81,7 @@ def registro_diagnostico(cat_linha, oof_linha, ind_linha) -> dict:
             "arquivo": cat_linha.arquivo,
             "equipamento": "transformador monofásico de bancada",
             "tipo_de_imagem": "termograma RGB não radiométrico",
-            "resolucao_pixels": [320, 240],
+            "resolucao_pixels": resolucao or [320, 240],
         },
         "diagnostico": {
             "condicao_estimada": "curto entre espiras" if defeito else "sem indício de curto",

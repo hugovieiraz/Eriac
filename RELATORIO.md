@@ -1,348 +1,262 @@
-# Relatório: MVP do artigo ERIAC (curto entre espiras por termografia)
+# Relatório: curto entre espiras por termografia (versão 2)
 
-Execução de 24/09/2026. Python 3.11.9, scikit-learn 1.9.1, torch 2.14 (CPU), semente 2026.
-O pipeline completo roda em cerca de 95 s e é determinístico: duas execuções seguidas deram
-números idênticos. Todos os números abaixo saem de `saida/`.
+25/09/2026. A versão 1 (MVP) está no histórico do Git. Esta versão acrescenta a busca e a
+seleção de modelos, indicadores robustos, aumento de dados, estatística, análise temporal,
+sensibilidade, o teste no motor de indução, a aplicação (linha de comando e interface), o
+artigo em LaTeX e a integração contínua. O que mudou está em `CHANGELOG.md`.
+
+Todos os números vêm de `saida/` e são reproduzíveis (semente 2026, execuções
+determinísticas). Ambiente: Python 3.11.9, scikit-learn 1.9.1, torch 2.14 (CPU).
 
 ---
 
 ## Resumo executivo
 
-1. **O resultado original foi reproduzido exatamente.** Com o protocolo do rascunho, o
-   híbrido dá F1-macro 0,9970 ± 0,0079 e MAE 0,0103 ± 0,0013 (6,16 espiras), os mesmos
-   números da Tabela II.
-2. **A validação por blocos temporais quase não derruba os números**: F1 0,996 → 0,982 e
-   MAE 5,8 → 6,8 espiras no híbrido. Isso não é boa notícia. **Uma miniatura de 16x12
-   pixels em cinza atinge F1 0,974 e MAE 9,8 espiras** no mesmo protocolo, e o DINOv2
-   sozinho (10,8 espiras) fica *pior* que ela. Dentro de uma mesma sessão de gravação, o
-   problema está no teto e não discrimina métodos.
-3. **Os testes que discriminam são a severidade não vista e a campanha não vista.** Com uma
-   severidade intermediária inteira fora do treino, o híbrido (DINOv2 + indicadores de
-   paleta) é o melhor dos 8 conjuntos: **16,8 espiras de erro médio, 31,7 no pior caso
-   (SC240), nível nominal certo em 94% das imagens**. Os indicadores sozinhos erram 43,5 e a
-   miniatura trivial erra 34,7. É aqui, e não na validação cruzada, que o DINOv2 se justifica.
-4. **O SC320 era o melhor caso.** O número honesto de interpolação é a média de 16,8 a 19,5
-   espiras (depende da versão dos indicadores), não 6,2.
-5. **As imagens se agrupam em 4 campanhas de gravação**, e o enquadramento da câmera muda
-   entre elas. Só a posição da caixa do transformador (4 números, nenhum padrão térmico)
-   classifica as 9 condições com F1 0,50, contra 0,11 do acaso. **Retirando uma campanha
-   inteira**, o híbrido erra 31,6 espiras em média na interpolação e não consegue
-   extrapolar. Em compensação, o detector de domínio marca 70% dessas imagens como "fora do
-   domínio", e a camada de relatório troca a recomendação por "encaminhar a especialista".
-6. **A condição saudável existe em uma única campanha (A).** Detectar "saudável" é
-   indistinguível de detectar "campanha A". A imagem saudável é mais clara que a do SC80.
-7. **A camada LLM ficou auditável.** Os números vêm do modelo, a recomendação vem de regras e
-   o texto passa por um verificador. Nos 255 relatórios, o verificador pega 99,6% a 100% de
-   seis tipos de erro injetados de propósito (número trocado, temperatura inventada, corrente
-   inventada, espiras recalculadas, recomendação trocada, limitações omitidas).
-8. **Duas coisas não foram executadas aqui.** A chamada à API do Claude não rodou porque não
-   há credencial no ambiente; o código está pronto. A re-extração do DINOv2 foi bloqueada pelo
-   ambiente, porque o `torch.hub` baixa e executa código do GitHub. Usei os vetores DINOv2 da
-   sua execução original, conferidos imagem a imagem por SHA-256 (255/255), e deixei o
-   `extrair_dinov2.py` para você rodar.
+1. **O resultado do rascunho foi reproduzido exatamente**: F1-macro 0,9970 e MAE de 6,16
+   espiras com o protocolo original.
+2. **Dentro de uma sessão de gravação, o problema está no teto.** Uma miniatura de 16×12
+   pixels em cinza atinge F1 0,974 e erro de 9,8 espiras; o DINOv2 sozinho erra mais (10,8).
+   Esse teste não distingue métodos.
+3. **O teste que distingue é a severidade não vista.** O híbrido DINOv2 + indicadores de
+   paleta erra **14,8 espiras de 600** em média (IC 95%: 9,6 a 20,5), com pior caso de 25,8,
+   e acerta o nível nominal em **97%** das imagens. Ele supera o DINOv2 sozinho nas 7
+   severidades (p = 0,016) e os indicadores sozinhos em 6 de 7 (p = 0,031).
+4. **Buscar o "melhor modelo" não ajudou.** Entre 44 combinações de features e regressores,
+   a seleção aninhada (que escolhe sem ver o teste) erra 18,5 espiras, mais que o híbrido
+   definido de antemão (14,8).
+5. **Campanha de gravação nova é o limite do dataset.** Com uma campanha inteira fora do
+   treino, o híbrido erra 33,6 espiras e não extrapola. O detector de domínio marca 67% dessas
+   imagens, e o relatório passa a mandar para especialista.
+6. **Duas melhorias de robustez se confirmaram.** O filtro de mediana no índice de paleta
+   levou o F1 dos indicadores com ruído de 0,38 para 0,66. O aumento de dados levou a
+   MobileNet, com ruído, de 36,7 para 16,5 espiras e, de forma exploratória, reduziu o erro
+   com campanha nova de 33,0 para 19,4.
+7. **O pipeline funciona sem ajustes no motor de indução**: F1 0,997 nas 11 condições. Mas lá
+   o teste de severidade não vista não discrimina métodos, porque o controle de posição erra
+   menos que as redes (3,8 contra 4,1 pontos percentuais).
+8. **A camada de LLM é auditável**: o verificador detecta de 99,2% a 100% dos erros
+   injetados. **Os relatórios reais do Claude ainda não foram gerados** (falta credencial).
+9. **Há uma ferramenta pronta**: `diagnosticar.py` e uma interface web local, com o modelo
+   MobileNet treinado com aumento de dados e intervalo de ±22 espiras calibrado para
+   severidade nova.
 
 ---
 
-## 1. Plano de ação: cada furo e como foi contornado
+## 1. O que o dataset revela
 
-| # | Furo no rascunho | Contorno no MVP | Status |
-|---|---|---|---|
-| 1 | Validação por imagem com quadros quase idênticos dos dois lados | Blocos temporais contíguos por classe, com purga de 1 quadro vizinho no treino; o esquema aleatório fica só como comparação | ✅ |
-| 2 | Hiperparâmetros fixos (C=1, Ridge=10) | Validação aninhada: C e α do Ridge escolhidos em validação interna por grupo | ✅ |
-| 3 | Sem linha de base nem controle | Miniatura trivial 16x12 e controle de posição (só a caixa do objeto) | ✅ |
-| 4 | Sem ablação: não se sabia se o DINOv2 contribuía | 8 conjuntos: trivial, posição, indicadores v1, indicadores de paleta, MobileNetV3, DINOv2, híbrido v1, híbrido de paleta; comparação pareada por dobra | ✅ |
-| 5 | SC320 destacado como se fosse típico | Tabela completa das 7 condições retiradas, com média e pior caso, para todos os conjuntos | ✅ |
-| 6 | Campanhas de gravação não identificadas | Campanhas inferidas da numeração dos arquivos e teste de retirar uma campanha inteira | ✅ novo |
-| 7 | `round(α·7,5)` para achar a classe (classes não são igualmente espaçadas) | Classe de α nominal mais próximo; teste unitário cobre o caso 0,99 → SC600 | ✅ |
-| 8 | Coerência visual comparava com o dataset inteiro, incluindo a própria imagem | Coerência calculada só com o treino da dobra | ✅ |
-| 9 | Média aritmética de matiz HSV (variável circular) | Substituída pelo índice ordinal de paleta, que dispensa o HSV | ✅ |
-| 10 | O rótulo verdadeiro ia no JSON entregue ao LLM | Rótulo removido do registro; um teste garante isso | ✅ |
-| 11 | LLM sem prompt versionado, sem modelo registrado, testado em uma imagem | Prompt versionado, backend Claude com metadados, backend determinístico de referência, verificador nas 255 imagens | ✅ (Claude não executado) |
-| 12 | O resumo prometia recomendações, o rascunho não tinha | Recomendações por regra determinística; o LLM só transcreve | ✅ (faixas ilustrativas) |
-| 13 | Nenhuma medida de incerteza | Intervalo conformal de 90% para α, com cobertura medida | ✅ novo |
-| 14 | Nenhuma proteção contra imagem estranha | Detector de domínio (kNN) que troca a recomendação | ✅ novo |
-| 15 | Robustez desconhecida | Ruído, desfoque, translação e rotação no teste | ✅ parcial (DINOv2 depende da re-extração) |
-| 16 | Explicabilidade | Mapas de oclusão | ✅ |
-| 17 | DINOv2 sem versão fixada | Vetores originais conferidos por SHA-256; `extrair_dinov2.py` registra o commit do hub e o hash dos pesos | ⏳ você roda |
-| 18 | "Framework generalista" sem teste em outro equipamento | Não feito. O dataset do motor já está no `thermal_fault_lab` | ⏳ próximo passo |
+| Achado | Número | Consequência |
+|---|---|---|
+| A paleta da câmera tem 253 cores numa única curva | distância máxima ao caminho: 0 | cada pixel vira um índice ordinal exato (sem °C) |
+| A numeração dos arquivos revela 4 campanhas | A = saudável; B = 80, 160; C = 240, 320; D = 400 a 600 | enquadramento e fundo mudam entre campanhas |
+| O saudável é mais claro que o SC80 | índice máximo 0,136 contra 0,088 | detectar o saudável = detectar a campanha A |
+| Quadros vizinhos são quase idênticos | vizinho mais próximo da mesma classe em 98,8% | a divisão aleatória infla os números |
+| Saturação no topo da paleta | 0,03% da região no SC600 | desprezível |
+| O equipamento aquece ou esfria durante algumas gravações | Spearman até 0,91 | mas o α previsto varia no máximo 18 espiras |
 
 ---
 
-## 2. O que foi construído
+## 2. Resultados
 
-Pasta `C:\Users\hv392\projetos\eriac_transformador\`:
+### 2.1 Validação dentro das sessões
 
-| Arquivo | Papel |
-|---|---|
-| `config.py` | Caminhos, rótulos, campanhas esperadas, grades de hiperparâmetros, faixas de recomendação, unidades proibidas |
-| `dados.py` | Catálogo com SHA-256, campanhas inferidas, blocos temporais, purga |
-| `paleta.py` | Recupera as 253 cores da paleta sem rótulo e converte RGB em índice ordinal |
-| `features.py` | Segmentação (a mesma do rascunho), 39 indicadores de paleta, trivial, posição, MobileNetV3, DINOv2, perturbações |
-| `avaliacao.py` | Validação aninhada, 4 esquemas (aleatório, blocos, interpolação, campanha), conformal, domínio, coerência, comparação pareada |
-| `relatorio_llm.py` | Registro estruturado, regras de recomendação, prompt, backends determinístico e Claude, verificador, mutações |
-| `figuras.py` | 10 figuras do artigo |
-| `main.py` | Orquestra tudo (`--llm claude`, `--n-llm`, `--sem-robustez`) |
-| `extrair_dinov2.py` | Regenera DINOv2 limpo e perturbado, com proveniência |
-| `test_mvp.py` | 19 testes; todos passam |
+Validação aninhada, 5 dobras. F1-macro das 9 condições; MAE em espiras de 600.
 
----
-
-## 3. Achados sobre os dados
-
-**Paleta.** As 255 imagens usam exatamente 253 cores, e todas ficam sobre uma única curva no
-espaço RGB: a distância máxima de uma cor ao caminho recuperado é 0. A paleta vai de azul
-escuro `(5, 0, 94)` a branco `(255, 255, 255)`, passando por magenta, laranja e amarelo. Cada
-pixel, portanto, tem um **índice ordinal exato**. Ele é mais defensável que o L do CIELAB (que
-não é monótono em todas as paletas) e continua sem nenhuma conversão para °C.
-
-**Campanhas.** A numeração continua de uma pasta para a outra: p2 termina em 026 e p3 começa
-em 027. O mesmo vale para p4 → p5 e para p6 → p7 → p8 → p9. Isso dá 4 campanhas:
-A = {Healthy}, B = {SC80, SC160}, C = {SC240, SC320} e D = {SC400, SC480, SC560, SC600}. O
-enquadramento muda entre elas (veja `fig_indicadores_severidade.png`: o índice do fundo salta
-de campanha para campanha).
-
-**A condição saudável é mais clara que o SC80.** O índice máximo médio por imagem é 0,136 no
-Healthy e 0,088 no SC80; depois cresce de forma monótona até 0,9995 no SC600. Isso é um
-efeito de campanha (ambiente, câmera ou cena), não do defeito.
-
-**Saturação desprezível.** Só o SC600 toca o fim da paleta: 0,03% da ROI em média, no máximo
-0,11%.
-
-**Quase-duplicatas.** O vizinho mais próximo de cada imagem no espaço DINOv2 é da mesma classe
-em 98,8% dos casos, é o quadro imediatamente adjacente em 35,7% e está a até 3 quadros em
-59,2%. O cosseno mediano com o quadro adjacente é 0,980, e com a imagem mais parecida de outra
-classe é 0,966.
-
----
-
-## 4. Resultados
-
-### 4.1 Validação cruzada: aleatória × blocos temporais
-
-Validação aninhada, 5 dobras. No esquema de blocos, cada dobra testa um trecho contíguo de
-todas as 9 classes.
-
-| Conjunto | Dim. | F1 aleatória | **F1 blocos** | MAE aleatória (espiras) | **MAE blocos (espiras)** |
-|---|---:|---:|---:|---:|---:|
-| Trivial 16x12 | 192 | 0,991 | **0,974** | 7,7 | **9,8** |
-| Posição (controle) | 4 | 0,605 | **0,499** | 91,2 | **90,9** |
-| Indicadores v1 (rascunho) | 44 | 0,995 | **0,995** | 4,7 | **5,5** |
-| Indicadores de paleta | 39 | 1,000 | **1,000** | 5,2 | **6,7** |
-| MobileNetV3 | 576 | 1,000 | **0,980** | 6,3 | **8,1** |
-| DINOv2 | 384 | 0,987 | **0,982** | 9,0 | **10,8** |
-| DINOv2 + ind. v1 | 428 | 0,996 | **0,996** | 6,3 | **7,2** |
-| **DINOv2 + ind. paleta** | 423 | 0,996 | **0,982** | 5,8 | **6,8** |
-
-Comparação pareada no esquema de blocos (mesmas 5 dobras):
-
-- O híbrido **reduz o MAE em 4,0 espiras em relação ao DINOv2 sozinho, nas 5 dobras**, e
-  empata em F1.
-- Em relação aos indicadores sozinhos, o híbrido não ganha nada: F1 −0,019 (0 vitórias, 3
-  empates) e MAE +0,1 espira.
-- **Os indicadores sozinhos superam a miniatura trivial por 3,1 espiras, nas 5 dobras.**
-- **O DINOv2 sozinho perde para a miniatura trivial** por 1,0 espira e perde para a MobileNetV3
-  nas 5 dobras (por 2,8 espiras).
-
-A classificação binária fica em 1,000 para quase tudo. Como a condição saudável é uma
-campanha só (seção 3), isso não sustenta nenhuma conclusão.
-
-### 4.2 Severidade não vista (o teste que discrimina)
-
-Cada condição intermediária sai inteira do treino e só a regressão é avaliada. O
-hiperparâmetro é escolhido por validação interna também agrupada por nível.
-
-| Conjunto | MAE médio (espiras) | Pior caso | Nível certo | Fora do domínio |
-|---|---:|---|---:|---:|
-| Trivial 16x12 | 34,7 | 60,8 (SC240) | 50% | 21% |
-| Posição | 114,0 | 243,5 (SC560) | 20% | 2% |
-| Indicadores v1 | 33,0 | 80,0 (SC80) | 58% | 75% |
-| Indicadores de paleta | 43,5 | 99,0 (SC160) | 51% | 72% |
-| MobileNetV3 | 18,0 | 27,7 (SC320) | 92% | 44% |
-| DINOv2 | 21,4 | 34,5 (SC240) | 85% | 32% |
-| DINOv2 + ind. v1 | 19,5 | 39,7 (SC80) | 91% | 36% |
-| **DINOv2 + ind. paleta** | **16,8** | **31,7 (SC240)** | **94%** | 33% |
-
-No híbrido de paleta, o erro por condição retirada é: SC80 28,6 · SC160 16,9 · SC240 31,7 ·
-SC320 8,7 · SC400 13,8 · SC480 7,9 · SC560 10,1 espiras.
-
-Os indicadores sozinhos erram feio nas pontas da interpolação: no SC80 preveem α = 0.
-Combinados com a representação profunda, dão o melhor resultado. Esta é a evidência que
-sustenta o método híbrido no artigo.
-
-Nota sobre o híbrido v1: com Ridge fixo em 10, como no rascunho, a média das 7 condições dá
-16,1 espiras; com a escolha aninhada, 19,5. O SC320 continua em 6,2 nos dois casos.
-
-### 4.3 Campanha não vista (o teste mais duro)
-
-Uma campanha inteira sai do treino, levando junto o enquadramento dela. As campanhas B e C
-são interpolação; A e D são extrapolação.
-
-| Conjunto | MAE campanha B | MAE campanha C | **MAE médio (B+C)** | Fora do domínio (B+C) |
+| Features | F1 aleatória | **F1 blocos** | MAE aleatória | **MAE blocos** |
 |---|---:|---:|---:|---:|
-| Trivial | 92,1 | 88,7 | 91,0 | 30% |
-| Posição | 142,3 | 131,7 | 135,9 | 0% |
-| Indicadores de paleta | 78,1 | 25,4 | 52,9 | 100% |
-| MobileNetV3 | 46,5 | 18,9 | 33,0 | 100% |
-| DINOv2 | 23,5 | 57,2 | 39,6 | 60% |
-| **DINOv2 + ind. paleta** | 26,7 | 38,1 | **31,6** | 70% |
+| Miniatura 16×12 (linha de base) | 0,991 | **0,974** | 7,7 | **9,8** |
+| Posição do objeto (controle) | 0,605 | **0,499** | 91,2 | **90,9** |
+| Indicadores v1 (rascunho) | 0,995 | **0,995** | 4,7 | **5,5** |
+| Indicadores de paleta | 1,000 | **1,000** | 4,0 | **5,3** |
+| MobileNetV3 | 1,000 | **0,980** | 6,3 | **8,1** |
+| DINOv2 | 0,987 | **0,982** | 9,0 | **10,8** |
+| DINOv2 + indicadores v1 | 0,996 | **0,996** | 6,3 | **7,2** |
+| **DINOv2 + indicadores de paleta** | 0,996 | **0,982** | 5,7 | **6,9** |
+| MobileNetV3 + indicadores de paleta | 1,000 | **0,980** | 5,2 | **6,9** |
 
-Na extrapolação o modelo falha, como esperado. Retirada a campanha A, o saudável é previsto
-com α ≈ 0,29. Retirada a campanha D, tudo satura em α = 1. **A trivial desaba de 9,8 para 91
-espiras** quando a campanha muda: ela memorizava a sessão. O híbrido perde muito menos. O
-detector de domínio marca 60% a 100% dessas imagens nos conjuntos com indicadores ou redes
-(só 30% na trivial e 0% no controle de posição). É justamente esse sinal que impede um
-relatório confiante sobre uma imagem de outra campanha.
+Intervalo conformal de 90% do híbrido: cobertura 0,929, meia-largura de 17 espiras.
 
-### 4.4 Incerteza, domínio e robustez
+### 2.2 Severidade não vista (o teste principal)
 
-**Intervalo conformal de 90%** (híbrido, blocos): **cobertura medida de 0,905**, com meia-largura
-média de 0,029 em α (17 espiras). Veja `fig_intervalos_conformais.png`.
+Cada severidade intermediária sai inteira do treino.
 
-**Domínio:** no esquema de blocos, 1,5% das imagens (4 de 255: 2 Healthy e 2 SC80) ficam acima
-do limiar.
+| Features | MAE médio | Pior caso | Nível certo | Cobertura IC 90% |
+|---|---:|---|---:|---:|
+| Miniatura 16×12 | 34,7 | 60,8 (SC240) | 49% | 89% |
+| Posição (controle) | 114,0 | 243,5 (SC560) | 20% | 86% |
+| Indicadores v1 | 33,0 | 80,0 (SC80) | 58% | 86% |
+| Indicadores de paleta | 38,8 | 80,0 (SC80) | 56% | 86% |
+| MobileNetV3 | 18,0 | 27,7 (SC320) | 92% | 91% |
+| DINOv2 | 21,4 | 34,5 (SC240) | 85% | 84% |
+| DINOv2 + indicadores v1 | 19,5 | 39,7 (SC80) | 91% | 83% |
+| **DINOv2 + indicadores de paleta** | **14,8** | **25,8 (SC80)** | **97%** | **91%** |
+| MobileNetV3 + indicadores de paleta | 17,0 | 22,9 (SC320) | 98% | 93% |
 
-**Robustez** (modelos treinados em imagens limpas, testados em imagens perturbadas):
+Híbrido, por severidade retirada: SC80 25,8 · SC160 14,2 · SC240 25,3 · SC320 6,0 ·
+SC400 12,0 · SC480 6,7 · SC560 13,6 espiras. O intervalo de 90% para severidade nova (±37
+espiras em média) cobriu 91% dos casos.
 
-| Conjunto | Perturbação | F1 | MAE (espiras) | Fora do domínio |
-|---|---|---:|---:|---:|
-| Indicadores | nenhuma | 1,000 | 6,7 | 2% |
-| Indicadores | ruído σ = 8 | **0,377** | 36,7 | **95%** |
-| Indicadores | translação 12 px | 0,995 | 18,7 | 7% |
-| MobileNetV3 | nenhuma | 0,980 | 8,1 | 4% |
-| MobileNetV3 | ruído σ = 8 | **0,683** | 36,7 | **100%** |
-| MobileNetV3 | desfoque σ = 1,5 | **0,584** | 24,8 | **94%** |
-| Trivial | translação 12 px | 0,903 | **58,0** | 26% |
+**Testes pareados (Wilcoxon sobre os 7 níveis; o menor p possível é 0,016):**
 
-Quando a imagem degrada ao ponto de derrubar o modelo, **o detector de domínio avisa em 94% a
-100% dos casos**. Tabela completa em `saida/robustez_perturbacoes.csv`.
+| Comparação | Diferença média | Níveis em que o 1º vence | p |
+|---|---:|---:|---:|
+| Híbrido × DINOv2 | −6,6 espiras | 7 de 7 | 0,016 |
+| Híbrido × indicadores | −24,0 espiras | 6 de 7 | 0,031 |
+| MobileNet + ind. × híbrido | +2,2 espiras | 3 de 7 | 0,69 (sem diferença detectável) |
 
-### 4.5 Oclusão
+### 2.3 Busca e seleção de modelos
 
-Entre 77% e 100% da queda do α previsto ao ocultar um quadrado da imagem acontece **dentro da
-ROI do transformador**, tanto na MobileNet quanto nos indicadores. Os modelos olham o
-enrolamento, não o fundo. Veja `fig_oclusao.png` e `saida/oclusao_resumo.json`.
+Foram avaliadas 44 combinações de 7 conjuntos de features e 6 regressores (Ridge, PLS,
+PCA + Ridge, Kernel Ridge, SVR, processo gaussiano), mais 2 médias de modelos.
 
-### 4.6 Camada de relatório (LLM)
+| Critério | Erro na severidade nova |
+|---|---:|
+| Melhor combinação, escolhida olhando o teste (otimista) | 13,6 espiras |
+| **Seleção aninhada** (escolhe sem ver a severidade retirada) | **18,5 espiras** |
+| Híbrido definido de antemão | 14,8 espiras |
 
-Arquitetura:
+A seleção aninhada escolheu 5 combinações diferentes ao longo dos 7 níveis. Com tão poucos
+níveis, buscar o melhor modelo não melhora de forma confiável. Os regressores com núcleo
+(Kernel Ridge, SVR) extrapolam mal (acima de 41 espiras). A média de DINOv2 e MobileNet foi a
+melhor com campanha nova (19,5 espiras), mas isso é leitura do teste, não resultado
+confirmado.
 
-```
-imagem → modelos → registro JSON (sem rótulo verdadeiro)
-                 → regra determinística escolhe a recomendação
-                 → LLM redige
-                 → verificador confere o texto contra o registro
-```
+### 2.4 Campanha não vista
 
-- **255 de 255 relatórios determinísticos aprovados** pelo verificador.
-- **Sensibilidade do verificador** (255 relatórios × 7 tipos de erro injetado):
+| Features | Camp. B | Camp. C | **B + C** | Fora do domínio |
+|---|---:|---:|---:|---:|
+| Miniatura 16×12 | 92,1 | 88,7 | **91,0** | 33% |
+| Posição (controle) | 142,3 | 131,7 | **135,9** | 4% |
+| Indicadores de paleta | 59,3 | 51,2 | **54,5** | 99% |
+| MobileNetV3 | 46,5 | 18,9 | **33,0** | 100% |
+| DINOv2 | 23,5 | 57,2 | **39,6** | 62% |
+| **DINOv2 + indicadores de paleta** | 29,2 | 39,6 | **33,6** | 67% |
+| MobileNetV3 + indicadores de paleta | 46,2 | 16,0 | **31,3** | 100% |
 
-| Erro injetado | Reprovado |
+Extrapolação: sem a campanha A, o saudável é previsto com α ≈ 0,27; sem a campanha D, tudo
+satura em α = 1.
+
+### 2.5 Robustez e aumento de dados
+
+**Filtro de mediana no índice de paleta** (adotado como padrão):
+
+| Indicadores | F1 limpa | F1 com ruído | Erro com translação |
+|---|---:|---:|---:|
+| Sem filtro | 1,000 | 0,38 | 18,7 espiras |
+| **Com filtro 5×5** | 1,000 | **0,66** | **6,3 espiras** |
+
+**Aumento de dados** (treino com cópias mais fracas que as perturbações do teste):
+
+| Modelo | Limpa | Ruído | Desfoque | Transl. | Rotação | Sev. nova | Camp. nova |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| MobileNetV3, sem aumento | 8,1 | 36,7 | 24,8 | 14,5 | 12,5 | 18,0 | 33,0 |
+| **MobileNetV3, com aumento** | 6,8 | 16,5 | 8,2 | 9,6 | 8,1 | **13,9** | **19,4** |
+| MobileNetV3 + ind., sem aumento | 6,9 | 34,0 | 20,1 | 13,9 | 9,8 | 17,0 | 31,3 |
+| MobileNetV3 + ind., com aumento | 4,1 | 6,3 | 4,5 | 4,9 | 4,2 | 19,2 | 34,7 |
+
+Com aumento, a MobileNet ganha robustez e também generaliza melhor para severidade e campanha
+novas; a combinação com indicadores fica muito robusta dentro da sessão, mas generaliza pior.
+Como são 4 variantes escolhidas olhando esses testes, o ganho da MobileNet é exploratório.
+Foi por isso que ela virou o modelo de aplicação (seção 3), e não o número principal.
+
+### 2.6 Sensibilidade e explicabilidade
+
+- **Limiar da região quente:** 0,65 e 0,75 dão resultados iguais; 0,55 piora a severidade nova.
+- **Blocos e purga:** com 3, 5 ou 8 blocos e purga de 0, 1 ou 3 quadros, o erro dentro das
+  sessões fica entre 6,1 e 9,0 espiras.
+- **Oclusão:** na MobileNet, 78% a 85% da queda de α ocorre ao ocultar o transformador. Nos
+  indicadores, 47% a 100%: no SC600, parte do efeito vem de fora da região segmentada.
+
+### 2.7 Motor de indução (segundo equipamento)
+
+369 imagens, 11 condições. A paleta também foi recuperada sem rótulos (242 cores). Severidade
+do estator = fração total de espiras em curto (hipótese nossa: % por fase × fases ÷ 3).
+
+| Features | F1 (11 cond.) | MAE blocos (p.p.) | MAE sev. nova (p.p.) | Pior (p.p.) |
+|---|---:|---:|---:|---:|
+| Miniatura 16×12 | 0,942 | 1,47 | 6,0 | 17,5 |
+| Posição (controle) | 0,542 | 4,45 | **3,8** | 8,8 |
+| Indicadores de paleta | 0,992 | 1,31 | 5,1 | 10,6 |
+| MobileNetV3 | 0,988 | 0,97 | 4,1 | 10,1 |
+| MobileNetV3 + indicadores | **0,997** | **0,85** | 4,4 | 10,7 |
+
+No motor, a numeração é uma única sequência que acompanha a severidade, e o enquadramento
+muda aos poucos: o controle de posição interpola tão bem quanto as redes. Então o "framework
+generalista" se sustenta para classificação e severidade dentro das sessões, não para
+generalização. O pior caso (A50, curto de 50% em uma fase) é previsto como mais severo do que
+a fração de espiras indica, o que sugere que o aquecimento não é linear nessa fração.
+
+### 2.8 Camada de relatório
+
+Os 255 relatórios gerados pelo modelo de texto fixo foram aprovados pelo verificador.
+Recomendações: 20 sem indício, 29 baixa, 78 intermediária, 122 elevada, 6 fora do domínio.
+
+| Erro injetado (255 relatórios cada) | Detectado |
 |---|---:|
 | Temperatura inventada ("87 °C") | 100% |
 | Corrente inventada ("3,2 A") | 100% |
 | Espiras recalculadas | 100% |
 | Recomendação trocada | 100% |
 | Limitações omitidas | 100% |
-| α alterado | 99,6% |
-| "Reduz a vida útil" | 0% reprovado, **100% com alerta** |
+| α alterado | 99,2% |
+| "Reduz a vida útil" | alerta em 100% |
 
-- **Limitação conhecida:** o verificador confere se o número *existe* no registro, não a
-  *que campo* ele se refere. Um teste documenta isso. O único α alterado que escapou coincidia
-  com outro número do registro.
-- **Recomendações** (faixas ilustrativas, não normativas): 20 sem indício, 29 baixa,
-  78 intermediária, 124 elevada, 4 fora do domínio. Todas as 22 imagens saudáveis caem em "sem
-  indício" ou "fora do domínio". O SC160 (α = 0,267) cai em "intermediária" porque o limite
-  ilustrativo da faixa baixa é 0,25; o limite precisa ser calibrado com especialista.
-
-Exemplo (`p5042.bmp`, a mesma imagem do rascunho), em `saida/relatorios/`:
-
-> Severidade estimada: alfa = 0,540, com intervalo de 90% de 0,513 a 0,567. Isso corresponde a
-> cerca de 324 espiras em curto de 600 declaradas (intervalo de 308 a 340). Classe nominal mais
-> próxima: SC320 […] Dentro do domínio de treinamento: sim (score 0,56) […]
-> Recomendação: Severidade intermediária. Programar ensaios elétricos confirmatórios […]
-
-Backend Claude: modelo `claude-opus-5`, raciocínio adaptativo e fallback de recusa no servidor
-(`fallbacks: "default"`, beta `server-side-fallback-2026-07-01`). Cada relatório é salvo com o
-modelo que respondeu, o `request_id`, os tokens e a versão do prompt, e passa pelo mesmo
-verificador.
+Limitação conhecida: o verificador confere se cada número **existe** no registro, não a que
+campo ele se refere.
 
 ---
 
-## 5. O que muda no artigo
+## 3. Aplicação
 
-### 5.1 Resumo sugerido (substitui o atual)
-
-> Este trabalho avalia uma abordagem híbrida para identificação de curtos entre espiras e
-> estimativa de severidade em um transformador monofásico de bancada a partir de 255
-> termogramas RGB não radiométricos (condição saudável e oito níveis artificiais de curto).
-> Representações DINOv2 congeladas foram combinadas a indicadores relativos calculados sobre o
-> índice ordinal da paleta da câmera, recuperado sem rótulos. A avaliação usa blocos temporais
-> com purga, retirada integral de uma severidade e retirada integral de uma campanha de
-> aquisição, além de linha de base trivial e controle de enquadramento. Dentro das sessões de
-> gravação, até uma miniatura 16x12 pixels atinge F1-macro de 0,974, o que torna esse protocolo
-> pouco discriminante. Para severidades ausentes do treinamento, o método híbrido obteve erro
-> médio de 16,8 espiras (pior caso 31,7) e acertou o nível nominal em 94% das imagens, contra
-> 43,5 espiras dos indicadores isolados e 34,7 da linha de base. Um intervalo conformal de 90%
-> apresentou cobertura de 0,905. Um LLM redige o relatório a partir do diagnóstico estruturado,
-> com recomendações definidas por regras e verificação automática que detectou 99,6% a 100% dos
-> erros injetados. Os resultados não expressam temperatura nem validação entre equipamentos.
-
-### 5.2 Mudanças por seção
-
-- **Seção 2 (Dados):** acrescente as 4 campanhas, a paleta de 253 cores, o fato de a condição
-  saudável estar em uma campanha só e o saudável ser mais claro que o SC80.
-- **Seção 3 (Metodologia):** índice ordinal de paleta no lugar do L do CIELAB; blocos
-  temporais com purga; validação aninhada; trivial e posição; conformal; detector de domínio;
-  verificador.
-- **Tabela II:** substitua pela tabela 4.1 (com as duas colunas de esquema e os controles).
-- **Tabela III:** mostre todas as condições com média e pior caso para pelo menos trivial,
-  indicadores, DINOv2 e híbrido (tabela 4.2), e cite o SC320 como exemplo, não como resultado.
-- **Nova tabela:** campanha não vista (4.3).
-- **Seção 4.4 (LLM):** arquitetura com regras e verificador, e a tabela de sensibilidade.
-- **Figuras sugeridas:** `fig_interpolacao.png`, `fig_campanhas.png`,
-  `fig_esquemas_validacao.png`, `fig_intervalos_conformais.png`, `fig_oclusao.png`
-  (em `saida/figuras/`).
-- **Conclusões:** a contribuição do DINOv2 aparece na generalização para severidade não vista,
-  não na validação cruzada; a detecção do saudável não é separável da campanha.
-
-### 5.3 Alinhamento com o resumo já enviado
-
-| Promessa do resumo enviado | Situação |
+| Peça | Uso |
 |---|---|
-| LLM gera recomendações | ✅ via regras; o LLM só redige, o que é mais defensável |
-| "Padrões térmicos" | ⚠️ troque por "padrões térmicos relativos na paleta da câmera" |
-| "Framework generalista" | ⚠️ o pipeline é genérico; falta aplicar ao motor (próximo passo) |
-| Identificar e estimar a severidade | ✅ com incerteza e aviso de domínio |
+| `diagnosticar.py` | uma imagem ou uma pasta → JSON, relatório `.md`, `resumo.csv` |
+| `interface/servidor.py` | interface web local: arrastar um termograma, ver α com intervalo, índice de paleta, região quente, recomendação, relatório e verificador |
+| `aplicacao.py` | treina, salva (`modelos/`) e carrega o modelo |
 
----
+Modelo: MobileNetV3-small com aumento de dados; intervalo de 90% de ±22 espiras, calibrado
+retirando níveis de severidade. Testes feitos: um exemplo do SC320 dá α = 0,539 (323
+espiras); um termograma do **motor** enviado ao modelo do transformador foi marcado **fora
+do domínio**, e a recomendação virou "encaminhar a especialista"; um arquivo que não é imagem
+gera mensagem de erro clara; tentativas de ler arquivos fora da pasta de exemplos são
+bloqueadas.
 
-## 6. O que falta (em ordem de impacto)
+## 4. Artigo em LaTeX
 
-1. **Rodar `extrair_dinov2.py`** (alguns minutos em CPU). Completa a robustez do DINOv2 e do
-   híbrido e registra o commit e o hash dos pesos.
-2. **Rodar `main.py --llm claude --n-llm 20`** com credencial da Anthropic, para a tabela
-   "relatórios reais aprovados pelo verificador". É o dado que falta na seção do LLM.
-3. **Calibrar as faixas de recomendação** com um especialista ou com a literatura. As de agora
-   são ilustrativas.
-4. **Aplicar o mesmo pipeline ao motor** (`thermal_fault_lab/dados`), para sustentar o
-   "framework generalista".
-5. **Referências:** o rascunho tem 2. Faltam termografia em transformadores, detecção de curto
-   entre espiras, conformal prediction, detecção de fora do domínio e LLMs em manutenção.
-6. **Uma segunda campanha com imagens saudáveis**, se o grupo tiver acesso à bancada. Isso
+`artigo/artigo.tex` traz o texto completo, com 8 tabelas, 5 figuras e 19 referências.
+Todos os números do texto (90 macros) vêm de `artigo/numeros.tex`, gerado dos resultados.
+Para compilar, envie `artigo/artigo_overleaf.zip` ao Overleaf (veja `artigo/LEIA-ME.md`).
+Não havia TeX instalado para compilar aqui: o arquivo passou por uma checagem estática
+(chaves e ambientes balanceados, macros definidas, citações presentes no `.bib`, colunas das
+tabelas), mas **a primeira compilação no Overleaf pode apontar algum ajuste**.
+
+## 5. Engenharia
+
+- 34 testes (`test_mvp.py`, `test_extras.py`). Os que precisam do dataset são pulados sem
+  ele; os demais usam dados sintéticos.
+- GitHub Actions (`.github/workflows/testes.yml`): a cada envio, instala as dependências,
+  baixa o dataset do espelho oficial e roda os testes.
+- `requirements-ci.txt` com versões fixadas.
+
+## 6. O que depende de você
+
+1. **Rodar `extrair_dinov2.py`** (o `torch.hub` foi bloqueado aqui). Isso completa a
+   robustez do DINOv2 e do híbrido e registra o commit e o hash dos pesos.
+2. **Rodar `main.py --llm claude --n-llm 20`** com credencial da Anthropic. É o dado que
+   falta na seção de relatórios do artigo.
+3. **Completar o artigo**: autores, 3 a 5 referências do setor e os resultados do LLM
+   (marcados em vermelho com `TODO`). Conferir o modelo oficial e o limite de páginas do ERIAC.
+4. **Calibrar as faixas de recomendação** com um especialista.
+5. **Escolher a licença** do repositório.
+6. Se houver acesso à bancada: **uma segunda campanha com o transformador saudável**. É o que
    resolveria o maior fator de confusão.
 
----
-
-## 7. Como reproduzir
+## 7. Reproduzir
 
 ```bash
-cd C:\Users\hv392\projetos\eriac_transformador
-../thermal_fault_lab/.venv/Scripts/python.exe -m pytest -q test_mvp.py
-../thermal_fault_lab/.venv/Scripts/python.exe main.py
+.venv/Scripts/python.exe -m pytest -q
+.venv/Scripts/python.exe main.py
+.venv/Scripts/python.exe experimentos.py
+.venv/Scripts/python.exe motor.py
+.venv/Scripts/python.exe gerar_painel.py
+.venv/Scripts/python.exe artigo/gerar_artigo.py
 ```
-
-Principais arquivos de saída: `resumo_validacao.csv`, `comparacao_pareada_blocos.csv`,
-`interpolacao_severidade.csv`, `interpolacao_resumo.csv`, `generalizacao_por_campanha.csv`,
-`robustez_perturbacoes.csv`, `reproducao_protocolo_original.csv`, `auditoria_dataset.json`,
-`registros_estruturados.json`, `verificacao_relatorios.csv`, `sensibilidade_verificador.csv`,
-`previsoes_oof_principal.csv`, `figuras/`, `relatorios/`.

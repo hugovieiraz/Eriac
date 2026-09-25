@@ -1,0 +1,28 @@
+name: testes
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  testes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar dependências
+        run: pip install -r requirements-ci.txt
+
+      - name: Baixar o dataset do transformador (espelho oficial dos autores)
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q libarchive-tools
+          mkdir -p dados/IR_trans_bmp
+          curl -sSL -o dados/IR_trans_bmp.rar https://raw.githubusercontent.com/mohnaj-nit/thermal-images-equip/master/IR_trans_bmp.rar
+          bsdtar -xf dados/IR_trans_bmp.rar -C dados/IR_trans_bmp
+
+      - name: Testes
+        run: pytest -q

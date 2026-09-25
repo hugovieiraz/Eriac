@@ -1,0 +1,6 @@
+conjunto,mae_medio_pp,pior_pp,cobertura_90,fora_dominio
+trivial,6.022,17.517,0.847,0.01
+posicao,3.775,8.837,0.714,0.0
+indicadores,5.053,10.613,0.857,0.815
+mobilenet,4.07,10.114,0.853,0.275
+hibrido_mb,4.392,10.671,0.857,0.346

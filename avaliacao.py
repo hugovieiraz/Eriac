@@ -34,19 +34,37 @@ from sklearn.preprocessing import StandardScaler
 
 import config
 from dados import vizinhos_para_purgar
+from modelos import REGRESSORES
 
 warnings.filterwarnings("ignore", category=ConvergenceWarning)
 
-ALFAS = np.array(config.ALFA_NOMINAL)
 INDICADORES_COERENCIA = ["fracao_area_quente", "indice_media", "gradiente_medio", "hotspot_distancia_centro"]
 
 
+@dataclass(frozen=True)
+class Problema:
+    """O que muda de um equipamento para outro: nomes dos níveis, α nominal de cada nível
+    e a escala que converte α na unidade reportada (600 espiras no transformador)."""
+    classes: tuple[str, ...]
+    alfas: tuple[float, ...]
+    escala: float
+
+    @property
+    def n(self) -> int:
+        return len(self.classes)
+
+
+TRANSFORMADOR = Problema(tuple(config.ORDEM_CLASSES), tuple(config.ALFA_NOMINAL), float(config.TOTAL_ESPIRAS))
+ALFAS = np.array(config.ALFA_NOMINAL)
+
+
 # ------------------------------------------------------------- utilitários ----
-def classe_mais_proxima(alfa: np.ndarray) -> np.ndarray:
+def classe_mais_proxima(alfa: np.ndarray, alfas=None) -> np.ndarray:
     """Nível nominal cujo alfa está mais perto. As classes NÃO são igualmente espaçadas
     (SC560 -> SC600 são 40 espiras, as demais 80), então round(alfa * 7.5) erra."""
     alfa = np.atleast_1d(alfa)
-    return np.abs(alfa[:, None] - ALFAS[None, :]).argmin(axis=1)
+    ref = ALFAS if alfas is None else np.asarray(alfas)
+    return np.abs(alfa[:, None] - ref[None, :]).argmin(axis=1)
 
 
 def _clf(C: float = 1.0) -> Pipeline:
@@ -59,9 +77,18 @@ def _reg(alpha: float = 10.0) -> Pipeline:
     return Pipeline([("escala", StandardScaler()), ("modelo", Ridge(alpha=alpha))])
 
 
-def ajustar(tarefa: str, X: np.ndarray, y: np.ndarray, divisoes_internas, fixo: float | None = None):
+def ajustar(tarefa: str, X: np.ndarray, y: np.ndarray, divisoes_internas, fixo: float | None = None,
+            regressor: str = "ridge"):
     """Ajusta o modelo da tarefa. Com `fixo`, usa o hiperparâmetro dado (protocolo original);
-    senão escolhe por GridSearch nas divisões internas. Devolve (modelo, hiperparâmetro)."""
+    senão escolhe por GridSearch nas divisões internas. Devolve (modelo, hiperparâmetro).
+    `regressor` escolhe um dos candidatos de modelos.REGRESSORES (padrão: Ridge)."""
+    if tarefa == "regressao" and regressor != "ridge":
+        base, grade = REGRESSORES[regressor]
+        if not grade:
+            return clone(base).fit(X, y), None
+        busca = GridSearchCV(base, grade, cv=divisoes_internas, scoring="neg_mean_absolute_error", n_jobs=-1, refit=True)
+        busca.fit(X, y)
+        return busca.best_estimator_, str(busca.best_params_)
     if tarefa == "regressao":
         base, grade, nome, pontuacao = _reg(), config.GRADE_RIDGE, "modelo__alpha", "neg_mean_absolute_error"
     else:
@@ -108,14 +135,14 @@ def metricas_multiclasse(y: np.ndarray, pred: np.ndarray) -> dict[str, float]:
     }
 
 
-def metricas_regressao(y: np.ndarray, pred: np.ndarray) -> dict[str, float]:
+def metricas_regressao(y: np.ndarray, pred: np.ndarray, escala: float = config.TOTAL_ESPIRAS) -> dict[str, float]:
     mae = mean_absolute_error(y, pred)
     return {
         "mae_alfa": mae,
         "rmse_alfa": float(root_mean_squared_error(y, pred)),
         # R² não é definido quando o alvo do teste é constante (uma classe só).
         "r2": r2_score(y, pred) if np.ptp(y) > 0 else np.nan,
-        "mae_espiras": mae * config.TOTAL_ESPIRAS,
+        "mae_espiras": mae * escala,
         "vies_alfa": float(np.mean(pred - y)),
     }
 
@@ -126,6 +153,25 @@ def quantil_conformal(modelo, X: np.ndarray, y: np.ndarray, divisoes) -> float:
     ajustado dos resíduos absolutos fora da dobra no treino."""
     oof = np.clip(cross_val_predict(clone(modelo), X, y, cv=divisoes), 0, 1)
     res = np.abs(oof - y)
+    n = len(res)
+    nivel = min(1.0, np.ceil((n + 1) * config.NIVEL_INTERVALO) / n)
+    return float(np.quantile(res, nivel, method="higher"))
+
+
+def quantil_conformal_interior(modelo, X: np.ndarray, y: np.ndarray, niveis: np.ndarray) -> float:
+    """Intervalo para severidade NOVA: resíduos obtidos retirando, um de cada vez, os níveis
+    interiores do treino (interpolação). Os níveis das pontas ficam de fora da calibração,
+    porque retirá-los seria extrapolação, que o modelo não se propõe a fazer."""
+    alfa_nivel = pd.Series(y).groupby(niveis).first()
+    residuos = []
+    for g, a in alfa_nivel.items():
+        outros = alfa_nivel.drop(g)
+        if not (outros.min() < a < outros.max()):
+            continue
+        dentro = niveis != g
+        m = clone(modelo).fit(X[dentro], y[dentro])
+        residuos.append(np.abs(np.clip(m.predict(X[~dentro]), 0, 1) - y[~dentro]))
+    res = np.concatenate(residuos)
     n = len(res)
     nivel = min(1.0, np.ceil((n + 1) * config.NIVEL_INTERVALO) / n)
     return float(np.quantile(res, nivel, method="higher"))
@@ -166,7 +212,7 @@ def coerencia_visual(ind_treino: pd.DataFrame, alfa_treino: np.ndarray, ind_test
 
 
 # --------------------------------------------------------- divisões externas ----
-def divisoes_externas(esquema: str, catalogo: pd.DataFrame):
+def divisoes_externas(esquema: str, catalogo: pd.DataFrame, purga: int = config.PURGA):
     """Gera (nome_dobra, treino, teste, divisoes_internas_fn)."""
     niveis = catalogo.nivel.to_numpy()
     n = len(catalogo)
@@ -179,9 +225,9 @@ def divisoes_externas(esquema: str, catalogo: pd.DataFrame):
             yield f"o{k}", tr, te, None
     elif esquema == "blocos":
         blocos = catalogo.bloco.to_numpy()
-        for b in range(config.N_BLOCOS):
+        for b in np.unique(blocos):
             te = np.flatnonzero(blocos == b)
-            purgar = vizinhos_para_purgar(catalogo, te)
+            purgar = vizinhos_para_purgar(catalogo, te, purga)
             tr = np.setdiff1d(np.flatnonzero(blocos != b), purgar)
             yield f"b{b}", tr, te, lambda tr_: divisoes_internas_por_grupo(blocos[tr_])
     else:
@@ -190,7 +236,8 @@ def divisoes_externas(esquema: str, catalogo: pd.DataFrame):
 
 # ------------------------------------------------------------- validação ----
 def validar(X: np.ndarray, catalogo: pd.DataFrame, ind: pd.DataFrame, esquema: str, nome: str,
-            testes_extras: dict[str, np.ndarray] | None = None) -> dict:
+            testes_extras: dict[str, np.ndarray] | None = None, problema: Problema = TRANSFORMADOR,
+            regressor: str = "ridge", purga: int = config.PURGA) -> dict:
     """Validação cruzada das três tarefas. `testes_extras` são versões alternativas de X
     (imagens perturbadas) avaliadas com os mesmos modelos treinados em dados limpos."""
     niveis = catalogo.nivel.to_numpy()
@@ -198,12 +245,12 @@ def validar(X: np.ndarray, catalogo: pd.DataFrame, ind: pd.DataFrame, esquema: s
     binario = (niveis > 0).astype(int)
     fixo = esquema == "original"
     linhas, oof, extras = [], [], []
-    confusao = np.zeros((9, 9), dtype=int)
-    for dobra, tr, te, internas_fn in divisoes_externas(esquema, catalogo):
+    confusao = np.zeros((problema.n, problema.n), dtype=int)
+    for dobra, tr, te, internas_fn in divisoes_externas(esquema, catalogo, purga):
         internas = None if fixo else internas_fn(tr)
         m_bin, c_bin = ajustar("binaria", X[tr], binario[tr], internas, config.C_ORIGINAL if fixo else None)
         m_mul, c_mul = ajustar("multiclasse", X[tr], niveis[tr], internas, config.C_ORIGINAL if fixo else None)
-        m_reg, a_reg = ajustar("regressao", X[tr], alfa[tr], internas, config.RIDGE_ORIGINAL if fixo else None)
+        m_reg, a_reg = ajustar("regressao", X[tr], alfa[tr], internas, config.RIDGE_ORIGINAL if fixo else None, regressor)
         p_bin = m_bin.predict_proba(X[te])[:, 1]
         p_mul = m_mul.predict(X[te])
         conf = m_mul.predict_proba(X[te]).max(axis=1)
@@ -213,10 +260,10 @@ def validar(X: np.ndarray, catalogo: pd.DataFrame, ind: pd.DataFrame, esquema: s
             "C_binaria": c_bin, "C_multiclasse": c_mul, "ridge_alpha": a_reg,
             **{f"bin_{k}": v for k, v in metricas_binarias(binario[te], p_bin).items()},
             **{f"mul_{k}": v for k, v in metricas_multiclasse(niveis[te], p_mul).items()},
-            **{f"reg_{k}": v for k, v in metricas_regressao(alfa[te], p_reg).items()},
-            "reg_nivel_mais_proximo_correto": float(np.mean(classe_mais_proxima(p_reg) == niveis[te])),
+            **{f"reg_{k}": v for k, v in metricas_regressao(alfa[te], p_reg, problema.escala).items()},
+            "reg_nivel_mais_proximo_correto": float(np.mean(classe_mais_proxima(p_reg, problema.alfas) == niveis[te])),
         }
-        confusao += confusion_matrix(niveis[te], p_mul, labels=np.arange(9))
+        confusao += confusion_matrix(niveis[te], p_mul, labels=np.arange(problema.n))
         if esquema == "blocos":
             q = quantil_conformal(m_reg, X[tr], alfa[tr], internas)
             dominio = DetectorDominio().ajustar(X[tr])
@@ -240,7 +287,7 @@ def validar(X: np.ndarray, catalogo: pd.DataFrame, ind: pd.DataFrame, esquema: s
                 extras.append({"conjunto": nome, "perturbacao": tipo, "dobra": dobra,
                                "bin_acuracia": accuracy_score(binario[te], (pb >= 0.5).astype(int)),
                                "mul_f1_macro": f1_score(niveis[te], pm, average="macro", zero_division=0),
-                               "reg_mae_espiras": mean_absolute_error(alfa[te], pr) * config.TOTAL_ESPIRAS,
+                               "reg_mae_espiras": mean_absolute_error(alfa[te], pr) * problema.escala,
                                "fora_dominio_fracao": float(np.mean(dominio.pontuar(X_alt[te]) > 1))})
         linhas.append(linha)
     return {"dobras": pd.DataFrame(linhas), "confusao": confusao,
@@ -258,32 +305,52 @@ def resumir(dobras: pd.DataFrame) -> pd.DataFrame:
 
 
 # ------------------------------------------------------- testes de generalização ----
-def _regressao_com_grupos(X_tr, y_tr, grupos_tr):
-    return ajustar("regressao", X_tr, y_tr, divisoes_internas_por_grupo(grupos_tr))
+def _regressao_com_grupos(X_tr, y_tr, grupos_tr, regressor: str = "ridge"):
+    return ajustar("regressao", X_tr, y_tr, divisoes_internas_por_grupo(grupos_tr), regressor=regressor)
 
 
-def interpolacao(X: np.ndarray, catalogo: pd.DataFrame, nome: str) -> pd.DataFrame:
+def niveis_interiores(catalogo: pd.DataFrame) -> list[int]:
+    """Níveis cujo alfa fica estritamente dentro da faixa dos demais: retirá-los é
+    interpolação, não extrapolação."""
+    alfa_nivel = catalogo.groupby("nivel").alfa.first()
+    return [int(n) for n, a in alfa_nivel.items()
+            if alfa_nivel.drop(n).min() < a < alfa_nivel.drop(n).max()]
+
+
+def interpolacao(X: np.ndarray, catalogo: pd.DataFrame, nome: str, problema: Problema = TRANSFORMADOR,
+                 regressor: str = "ridge", niveis_retirar: list[int] | None = None,
+                 completo: bool = True) -> pd.DataFrame:
     """Retira uma severidade intermediária inteira; validação interna agrupada por nível,
-    para que a escolha do hiperparâmetro também simule um nível não visto."""
+    para que a escolha do hiperparâmetro também simule um nível não visto. O intervalo
+    conformal usa resíduos fora da dobra agrupados por nível, então mede se o intervalo de
+    90% continua valendo diante de uma severidade nova. `completo=False` pula intervalo e
+    domínio (usado na seleção aninhada, onde só o erro interessa)."""
     niveis, alfa = catalogo.nivel.to_numpy(), catalogo.alfa.to_numpy()
     linhas = []
-    for held in range(1, 8):
+    for held in (niveis_retirar if niveis_retirar is not None else niveis_interiores(catalogo)):
         tr, te = np.flatnonzero(niveis != held), np.flatnonzero(niveis == held)
-        modelo, a = _regressao_com_grupos(X[tr], alfa[tr], niveis[tr])
+        modelo, a = _regressao_com_grupos(X[tr], alfa[tr], niveis[tr], regressor)
         pred = np.clip(modelo.predict(X[te]), 0, 1)
-        dominio = DetectorDominio().ajustar(X[tr])
+        extra = {}
+        if completo:
+            q = quantil_conformal_interior(modelo, X[tr], alfa[tr], niveis[tr])
+            cobre = (alfa[te] >= np.clip(pred - q, 0, 1)) & (alfa[te] <= np.clip(pred + q, 0, 1))
+            dominio = DetectorDominio().ajustar(X[tr])
+            extra = {"fora_dominio_fracao": float(np.mean(dominio.pontuar(X[te]) > 1)),
+                     "conformal_meia_largura": q, "conformal_cobertura": float(cobre.mean())}
         linhas.append({
-            "conjunto": nome, "condicao_retirada": config.ORDEM_CLASSES[held], "alfa_real": alfa[te][0],
-            "n_teste": len(te), "ridge_alpha": a, "alfa_previsto_medio": pred.mean(),
+            "conjunto": nome, "regressor": regressor, "condicao_retirada": problema.classes[held],
+            "alfa_real": alfa[te][0], "n_teste": len(te), "ridge_alpha": a, "alfa_previsto_medio": pred.mean(),
             "alfa_previsto_dp": pred.std(ddof=1),
-            **{k: v for k, v in metricas_regressao(alfa[te], pred).items() if k != "r2"},
-            "nivel_mais_proximo_correto": float(np.mean(classe_mais_proxima(pred) == held)),
-            "fora_dominio_fracao": float(np.mean(dominio.pontuar(X[te]) > 1)),
+            **{k: v for k, v in metricas_regressao(alfa[te], pred, problema.escala).items() if k != "r2"},
+            "nivel_mais_proximo_correto": float(np.mean(classe_mais_proxima(pred, problema.alfas) == held)),
+            **extra,
         })
     return pd.DataFrame(linhas)
 
 
-def por_campanha(X: np.ndarray, catalogo: pd.DataFrame, nome: str) -> pd.DataFrame:
+def por_campanha(X: np.ndarray, catalogo: pd.DataFrame, nome: str, problema: Problema = TRANSFORMADOR,
+                 regressor: str = "ridge") -> pd.DataFrame:
     """Retira uma campanha de aquisição inteira (com seu enquadramento de câmera)."""
     niveis, alfa, camp = catalogo.nivel.to_numpy(), catalogo.alfa.to_numpy(), catalogo.campanha.to_numpy()
     linhas = []
@@ -291,18 +358,18 @@ def por_campanha(X: np.ndarray, catalogo: pd.DataFrame, nome: str) -> pd.DataFra
         tr, te = np.flatnonzero(camp != c), np.flatnonzero(camp == c)
         faixa_tr = (alfa[tr].min(), alfa[tr].max())
         tipo = "interpolacao" if faixa_tr[0] < alfa[te].min() and alfa[te].max() < faixa_tr[1] else "extrapolacao"
-        modelo, a = _regressao_com_grupos(X[tr], alfa[tr], niveis[tr])
+        modelo, a = _regressao_com_grupos(X[tr], alfa[tr], niveis[tr], regressor)
         pred = np.clip(modelo.predict(X[te]), 0, 1)
         dominio = DetectorDominio().ajustar(X[tr])
         fora = dominio.pontuar(X[te]) > 1
         for nv in np.unique(niveis[te]):
             s = niveis[te] == nv
             linhas.append({
-                "conjunto": nome, "campanha_retirada": c, "tipo": tipo,
-                "condicao": config.ORDEM_CLASSES[nv], "alfa_real": alfa[te][s][0], "n_teste": int(s.sum()),
+                "conjunto": nome, "regressor": regressor, "campanha_retirada": c, "tipo": tipo,
+                "condicao": problema.classes[nv], "alfa_real": alfa[te][s][0], "n_teste": int(s.sum()),
                 "alfa_previsto_medio": pred[s].mean(),
-                "mae_espiras": mean_absolute_error(alfa[te][s], pred[s]) * config.TOTAL_ESPIRAS,
-                "vies_espiras": float(np.mean(pred[s] - alfa[te][s]) * config.TOTAL_ESPIRAS),
+                "mae_espiras": mean_absolute_error(alfa[te][s], pred[s]) * problema.escala,
+                "vies_espiras": float(np.mean(pred[s] - alfa[te][s]) * problema.escala),
                 "fora_dominio_fracao": float(fora[s].mean()),
             })
     return pd.DataFrame(linhas)

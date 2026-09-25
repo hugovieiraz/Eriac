@@ -1,0 +1,9 @@
+conjunto,treino,teste,mae_espiras,pior
+mobilenet,limpo,severidade,18.02,27.73
+mobilenet,limpo,campanha,32.99,45.84
+mobilenet,aumentado,severidade,13.93,23.2
+mobilenet,aumentado,campanha,19.35,20.7
+hibrido_mb_f,limpo,severidade,17.03,22.89
+hibrido_mb_f,limpo,campanha,31.31,45.32
+hibrido_mb_f,aumentado,severidade,19.19,60.48
+hibrido_mb_f,aumentado,campanha,34.7,56.44

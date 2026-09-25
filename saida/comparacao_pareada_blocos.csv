@@ -6,10 +6,12 @@ indicadores,trivial,mul_f1_macro,0.026423206423206412,2,3,5
 hibrido,hibrido_v1,mul_f1_macro,-0.013968253968253963,0,4,5
 dinov2,mobilenet,mul_f1_macro,0.0019127785794452734,1,3,5
 indicadores,indicadores_v1,mul_f1_macro,0.0051948051948051965,1,4,5
-hibrido,dinov2,reg_mae_espiras,-4.033760410361667,5,0,5
-hibrido,indicadores,reg_mae_espiras,0.10398632432035289,1,0,5
+hibrido_mb,hibrido,mul_f1_macro,-0.0019127785794452734,1,3,5
+hibrido,dinov2,reg_mae_espiras,-3.971415647650288,5,0,5
+hibrido,indicadores,reg_mae_espiras,1.586304618029137,0,0,5
 dinov2,trivial,reg_mae_espiras,1.032695527375735,2,0,5
-indicadores,trivial,reg_mae_espiras,-3.1050512073062864,5,0,5
-hibrido,hibrido_v1,reg_mae_espiras,-0.4193194053180177,4,0,5
+indicadores,trivial,reg_mae_espiras,-4.52502473830369,5,0,5
+hibrido,hibrido_v1,reg_mae_espiras,-0.3569746426066375,4,0,5
 dinov2,mobilenet,reg_mae_espiras,2.7719161468360634,0,0,5
-indicadores,indicadores_v1,reg_mae_espiras,1.1890568144035811,1,0,5
+indicadores,indicadores_v1,reg_mae_espiras,-0.2309167165938227,3,0,5
+hibrido_mb,hibrido,reg_mae_espiras,0.04567632462007083,3,0,5

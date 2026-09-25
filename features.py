@@ -4,7 +4,8 @@
   supera, não aprendeu nada além do brilho global.
 - posicao: caixa da região segmentada (centro x, centro y, largura, altura). Controle: não
   tem padrão térmico nenhum, só onde o objeto está no quadro.
-- indicadores: descritores relativos calculados sobre o índice ordinal de paleta.
+- indicadores: descritores relativos calculados sobre o índice ordinal de paleta, depois de
+  um filtro de mediana 5x5 (config.FILTRO_MEDIANA) que absorve ruído de sensor.
 - indicadores_v1: os 44 indicadores do rascunho original (lidos do CSV da execução original).
 - mobilenet: embeddings congelados da MobileNetV3-small (ImageNet), pesos locais.
 - dinov2: embeddings DINOv2 ViT-S/14 da execução original (conferidos por SHA-256).
@@ -59,11 +60,16 @@ def _entropia(valores: np.ndarray, bins: int = 32) -> float:
 
 
 # ------------------------------------------------------------ indicadores ----
-def indicadores_imagem(rgb: np.ndarray, conversor: ConversorPaleta) -> tuple[dict[str, float], np.ndarray, np.ndarray]:
+def indicadores_imagem(rgb: np.ndarray, conversor: ConversorPaleta, filtro_mediana: int = config.FILTRO_MEDIANA,
+                       limiar_quente: float = LIMIAR_QUENTE) -> tuple[dict[str, float], np.ndarray, np.ndarray]:
+    """`filtro_mediana` (3 ou 5) aplica um filtro de mediana ao mapa de índice antes dos
+    indicadores: ruído de sensor vira cores fora da paleta, e a mediana as absorve."""
     mascara = mascara_transformador(rgb)
     indice = conversor.indice(rgb)
+    if filtro_mediana:
+        indice = cv2.medianBlur(indice.astype(np.float32), filtro_mediana)
     roi = indice[mascara]
-    quente = mascara & (indice >= LIMIAR_QUENTE)
+    quente = mascara & (indice >= limiar_quente)
     if quente.sum() < 5:
         quente = mascara & (indice >= np.percentile(roi, 90))
     h, w = mascara.shape
@@ -114,8 +120,13 @@ def indicadores_imagem(rgb: np.ndarray, conversor: ConversorPaleta) -> tuple[dic
     return f, mascara, quente
 
 
-def indicadores(imagens: np.ndarray, conversor: ConversorPaleta) -> pd.DataFrame:
-    return pd.DataFrame([indicadores_imagem(img, conversor)[0] for img in imagens])
+def indicadores(imagens: np.ndarray, conversor: ConversorPaleta, filtro_mediana: int = config.FILTRO_MEDIANA,
+                limiar_quente: float = LIMIAR_QUENTE) -> pd.DataFrame:
+    return pd.DataFrame([indicadores_imagem(img, conversor, filtro_mediana, limiar_quente)[0] for img in imagens])
+
+
+# Indicadores que dependem do enquadramento ou do fundo, e portanto da campanha de gravação.
+INDICADORES_DE_CENA = ["fundo_mediana", "fracao_area_roi", "hotspot_x", "hotspot_y"]
 
 
 # ------------------------------------------------------ baseline e controle ----
@@ -210,19 +221,21 @@ def indicadores_v1_original(catalogo: pd.DataFrame) -> pd.DataFrame:
 
 
 # ---------------------------------------------------------- perturbações ----
-def perturbar(imagens: np.ndarray, tipo: str, semente: int = config.SEMENTE) -> np.ndarray:
+def perturbar(imagens: np.ndarray, tipo: str, semente: int = config.SEMENTE, intensidade: float = 1.0) -> np.ndarray:
+    """Perturbações de teste. `intensidade` escala todas (1 = a do teste; o aumento de dados
+    de treino usa intensidades diferentes para não treinar exatamente no que é testado)."""
     rng = np.random.default_rng(semente)
     saida = []
     for img in imagens:
         if tipo == "ruido":
-            x = np.clip(img.astype(np.float32) + rng.normal(0, 8, img.shape), 0, 255).astype(np.uint8)
+            x = np.clip(img.astype(np.float32) + rng.normal(0, 8 * intensidade, img.shape), 0, 255).astype(np.uint8)
         elif tipo == "desfoque":
-            x = cv2.GaussianBlur(img, (0, 0), 1.5)
+            x = cv2.GaussianBlur(img, (0, 0), 1.5 * intensidade)
         elif tipo == "translacao":
-            m = np.float32([[1, 0, 12], [0, 1, 8]])
+            m = np.float32([[1, 0, 12 * intensidade], [0, 1, 8 * intensidade]])
             x = cv2.warpAffine(img, m, (img.shape[1], img.shape[0]), borderMode=cv2.BORDER_REPLICATE)
         elif tipo == "rotacao":
-            m = cv2.getRotationMatrix2D((img.shape[1] / 2, img.shape[0] / 2), 4, 1.0)
+            m = cv2.getRotationMatrix2D((img.shape[1] / 2, img.shape[0] / 2), 4 * intensidade, 1.0)
             x = cv2.warpAffine(img, m, (img.shape[1], img.shape[0]), borderMode=cv2.BORDER_REPLICATE)
         else:
             raise ValueError(tipo)

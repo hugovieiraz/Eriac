@@ -25,9 +25,10 @@ import figuras as fg
 import relatorio_llm as rl
 from paleta import ConversorPaleta, recuperar_paleta
 
-CONJUNTOS = ["trivial", "posicao", "indicadores_v1", "indicadores", "mobilenet", "dinov2", "hibrido_v1", "hibrido"]
+CONJUNTOS = ["trivial", "posicao", "indicadores_v1", "indicadores", "mobilenet", "dinov2", "hibrido_v1", "hibrido",
+             "hibrido_mb"]
 PRINCIPAL = "hibrido"
-ROBUSTEZ = ["trivial", "indicadores", "mobilenet"]
+ROBUSTEZ = ["trivial", "indicadores", "mobilenet", "hibrido_mb"]
 
 
 def log(msg: str, t0=[time.perf_counter()]) -> None:
@@ -137,6 +138,7 @@ def main() -> None:
         "dinov2": dinov2,
         "hibrido_v1": np.column_stack([dinov2, ind_v1.to_numpy()]),
         "hibrido": np.column_stack([dinov2, ind.to_numpy()]),
+        "hibrido_mb": np.column_stack([mobilenet, ind.to_numpy()]),
     }
     salvar_json({k: int(v.shape[1]) for k, v in X.items()}, "dimensoes_features.json")
     log("features: " + ", ".join(f"{k}={v.shape[1]}" for k, v in X.items()))
@@ -151,7 +153,9 @@ def main() -> None:
         for tipo in ft.PERTURBACOES:
             imgs_p = ft.perturbar(imagens, tipo)
             ind_p = ft.indicadores(imgs_p, conversor).to_numpy()
-            perturbados[tipo] = {"trivial": ft.trivial(imgs_p), "indicadores": ind_p, "mobilenet": ft.mobilenet(imgs_p)}
+            mob_p = ft.mobilenet(imgs_p)
+            perturbados[tipo] = {"trivial": ft.trivial(imgs_p), "indicadores": ind_p, "mobilenet": mob_p,
+                                 "hibrido_mb": np.column_stack([mob_p, ind_p])}
             d_p = ft.dinov2_perturbado(catalogo, tipo)
             if d_p is not None:
                 perturbados[tipo].update({"dinov2": d_p, "hibrido": np.column_stack([d_p, ind_p])})
@@ -190,7 +194,8 @@ def main() -> None:
     resumo.to_csv(config.SAIDA / "resumo_validacao.csv", index=False)
     blocos = dobras[dobras.esquema == "blocos"]
     pares = [("hibrido", "dinov2"), ("hibrido", "indicadores"), ("dinov2", "trivial"), ("indicadores", "trivial"),
-             ("hibrido", "hibrido_v1"), ("dinov2", "mobilenet"), ("indicadores", "indicadores_v1")]
+             ("hibrido", "hibrido_v1"), ("dinov2", "mobilenet"), ("indicadores", "indicadores_v1"),
+             ("hibrido_mb", "hibrido")]
     comparacoes = [av.comparacao_pareada(blocos, a, b, "mul_f1_macro", True) for a, b in pares] + \
                   [av.comparacao_pareada(blocos, a, b, "reg_mae_espiras", False) for a, b in pares]
     pd.DataFrame(comparacoes).to_csv(config.SAIDA / "comparacao_pareada_blocos.csv", index=False)

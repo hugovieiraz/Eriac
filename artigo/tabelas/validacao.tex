@@ -1,0 +1,15 @@
+\begin{tabular}{lrrrr}
+\toprule
+Features & F1 aleat. & F1 blocos & MAE aleat. & MAE blocos \\
+\midrule
+Miniatura 16$\times$12 (linha de base) & 0,991 & 0,974 & 7,7 & 9,8 \\
+Posição do objeto (controle) & 0,605 & 0,499 & 91,2 & 90,9 \\
+Indicadores v1 (rascunho) & 0,995 & 0,995 & 4,7 & 5,5 \\
+Indicadores de paleta & 1,000 & 1,000 & 4,0 & 5,3 \\
+MobileNetV3 & 1,000 & 0,980 & 6,3 & 8,1 \\
+DINOv2 & 0,987 & 0,982 & 9,0 & 10,8 \\
+DINOv2 + indicadores v1 & 0,996 & 0,996 & 6,3 & 7,2 \\
+\textbf{DINOv2 + indicadores de paleta} & \textbf{0,996} & \textbf{0,982} & \textbf{5,7} & \textbf{6,9} \\
+MobileNetV3 + indicadores de paleta & 1,000 & 0,980 & 5,2 & 6,9 \\
+\bottomrule
+\end{tabular}

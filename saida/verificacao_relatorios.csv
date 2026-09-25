@@ -49,8 +49,8 @@ p2025.bmp,deterministico,True,0,0,baixa
 p2026.bmp,deterministico,True,0,0,baixa
 p3027.bmp,deterministico,True,0,0,intermediaria
 p3028.bmp,deterministico,True,0,0,intermediaria
-p3029.bmp,deterministico,True,0,0,intermediaria
-p3030.bmp,deterministico,True,0,0,intermediaria
+p3029.bmp,deterministico,True,0,0,baixa
+p3030.bmp,deterministico,True,0,0,baixa
 p3031.bmp,deterministico,True,0,0,intermediaria
 p3032.bmp,deterministico,True,0,0,intermediaria
 p3033.bmp,deterministico,True,0,0,intermediaria
@@ -66,13 +66,13 @@ p3042.bmp,deterministico,True,0,0,intermediaria
 p3043.bmp,deterministico,True,0,0,intermediaria
 p3044.bmp,deterministico,True,0,0,intermediaria
 p3045.bmp,deterministico,True,0,0,intermediaria
-p3046.bmp,deterministico,True,0,0,baixa
-p3047.bmp,deterministico,True,0,0,baixa
+p3046.bmp,deterministico,True,0,0,intermediaria
+p3047.bmp,deterministico,True,0,0,intermediaria
 p3048.bmp,deterministico,True,0,0,intermediaria
-p3049.bmp,deterministico,True,0,0,baixa
+p3049.bmp,deterministico,True,0,0,intermediaria
 p3050.bmp,deterministico,True,0,0,baixa
 p3051.bmp,deterministico,True,0,0,intermediaria
-p3052.bmp,deterministico,True,0,0,intermediaria
+p3052.bmp,deterministico,True,0,0,baixa
 p3053.bmp,deterministico,True,0,0,intermediaria
 p3054.bmp,deterministico,True,0,0,intermediaria
 p3055.bmp,deterministico,True,0,0,intermediaria
@@ -251,6 +251,6 @@ p9118.bmp,deterministico,True,0,0,elevada
 p9119.bmp,deterministico,True,0,0,elevada
 p9120.bmp,deterministico,True,0,0,elevada
 p9121.bmp,deterministico,True,0,0,elevada
-p9122.bmp,deterministico,True,0,0,elevada
-p9123.bmp,deterministico,True,0,0,elevada
+p9122.bmp,deterministico,True,0,0,fora_do_dominio
+p9123.bmp,deterministico,True,0,0,fora_do_dominio
 p9124.bmp,deterministico,True,0,0,elevada

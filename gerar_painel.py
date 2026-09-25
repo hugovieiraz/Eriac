@@ -25,6 +25,37 @@ def _registros(df: pd.DataFrame, colunas: list[str], casas: int = 4) -> list[dic
             for linha in df[colunas].itertuples(index=False)]
 
 
+def _csv(caminho):
+    return pd.read_csv(caminho) if caminho.exists() else None
+
+
+def dados_opcionais(s) -> dict:
+    """Seções que dependem de experimentos.py e motor.py; ficam ocultas se faltarem."""
+    e, m = s / "experimentos", s / "motor"
+    saida = {}
+    zoo = _csv(e / "zoo_resumo.csv")
+    if zoo is not None:
+        saida["zoo"] = _registros(zoo, list(zoo.columns))
+        anin = _csv(e / "selecao_aninhada.csv")
+        saida["aninhada"] = _registros(anin, ["condicao_retirada", "escolhido", "mae_espiras"]) if anin is not None else None
+    aum, gen = _csv(e / "aumento_resumo.csv"), _csv(e / "aumento_generalizacao_resumo.csv")
+    if aum is not None:
+        linhas = _registros(aum, ["conjunto", "treino", "perturbacao", "reg_mae_espiras"])
+        linhas = [{**r, "mae_espiras": r.pop("reg_mae_espiras")} for r in linhas]
+        if gen is not None:
+            linhas += [{"conjunto": r["conjunto"], "treino": r["treino"], "perturbacao": r["teste"], "mae_espiras": r["mae_espiras"]}
+                       for r in _registros(gen, ["conjunto", "treino", "teste", "mae_espiras"])]
+        saida["aumento"] = linhas
+    der = _csv(e / "deriva_temporal.csv")
+    if der is not None:
+        saida["deriva"] = _registros(der, list(der.columns))
+    clf, blo, nv = _csv(m / "classificacao_11_condicoes.csv"), _csv(m / "severidade_blocos.csv"), _csv(m / "severidade_nao_vista_resumo.csv")
+    if clf is not None and blo is not None and nv is not None:
+        saida["motor"] = {"classificacao": _registros(clf, list(clf.columns)), "blocos": _registros(blo, list(blo.columns)),
+                          "nao_vista": _registros(nv, list(nv.columns))}
+    return saida
+
+
 def main() -> None:
     s = config.SAIDA
     resumo = pd.read_csv(s / "resumo_validacao.csv")
@@ -77,6 +108,7 @@ def main() -> None:
         "robustez": _registros(rob, ["conjunto", "perturbacao", "mul_f1_macro", "reg_mae_espiras", "fora_dominio_fracao"]),
         "verificador": _registros(sens, ["mutacao", "n", "reprovados", "com_alerta"]),
         "imagens": imagens,
+        **dados_opcionais(s),
     }
     json_dados = json.dumps(dados, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
     html = MODELO.read_text(encoding="utf-8").replace("/*__DADOS__*/null", json_dados)

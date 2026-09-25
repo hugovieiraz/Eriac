@@ -1,0 +1,13 @@
+variavel,valor,f1_blocos,mae_blocos,mae_interpolacao
+limiar_quente,0.55,0.9815,6.6666,15.7069
+limiar_quente,0.65,0.9815,6.8624,14.7976
+limiar_quente,0.75,0.9815,7.0595,14.4376
+blocos_purga,"3 blocos, purga 0",0.9779,7.6113,
+blocos_purga,"3 blocos, purga 1",0.9779,7.9713,
+blocos_purga,"3 blocos, purga 3",0.9779,9.0,
+blocos_purga,"5 blocos, purga 0",1.0,6.1841,
+blocos_purga,"5 blocos, purga 1",0.9815,6.8624,
+blocos_purga,"5 blocos, purga 3",0.9751,7.6511,
+blocos_purga,"8 blocos, purga 0",0.9952,6.0768,
+blocos_purga,"8 blocos, purga 1",0.9952,6.8684,
+blocos_purga,"8 blocos, purga 3",0.9692,7.3207,

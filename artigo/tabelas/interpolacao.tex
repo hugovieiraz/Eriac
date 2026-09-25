@@ -1,0 +1,15 @@
+\begin{tabular}{lrrrr}
+\toprule
+Features & MAE médio & Pior caso & Nível certo & Cobertura IC 90\% \\
+\midrule
+Miniatura 16$\times$12 (linha de base) & 34,7 & 60,8 (SC240) & 49\% & 89\% \\
+Posição do objeto (controle) & 114,0 & 243,5 (SC560) & 20\% & 86\% \\
+Indicadores v1 (rascunho) & 33,0 & 80,0 (SC80) & 58\% & 86\% \\
+Indicadores de paleta & 38,8 & 80,0 (SC80) & 56\% & 86\% \\
+MobileNetV3 & 18,0 & 27,7 (SC320) & 92\% & 91\% \\
+DINOv2 & 21,4 & 34,5 (SC240) & 85\% & 84\% \\
+DINOv2 + indicadores v1 & 19,5 & 39,7 (SC80) & 91\% & 83\% \\
+\textbf{DINOv2 + indicadores de paleta} & \textbf{14,8} & \textbf{25,8 (SC80)} & \textbf{97\%} & \textbf{91\%} \\
+MobileNetV3 + indicadores de paleta & 17,0 & 22,9 (SC320) & 98\% & 93\% \\
+\bottomrule
+\end{tabular}

@@ -11,17 +11,17 @@
   "diagnostico": {
     "condicao_estimada": "curto entre espiras",
     "probabilidade_de_defeito": 0.99,
-    "alfa_estimado": 0.54,
+    "alfa_estimado": 0.541,
     "nivel_do_intervalo_percentual": 90,
     "intervalo_alfa": [
-      0.513,
-      0.567
+      0.514,
+      0.569
     ],
     "espiras_totais_declaradas": 600,
-    "espiras_em_curto_estimadas": 324,
+    "espiras_em_curto_estimadas": 325,
     "intervalo_espiras": [
       308,
-      340
+      341
     ],
     "classe_nominal_mais_proxima": "SC320",
     "confianca_do_classificador": 0.917
@@ -34,8 +34,8 @@
     "concordancia_entre_modulos": true
   },
   "indicadores_relativos": {
-    "fracao_area_relativamente_quente": 0.116,
-    "indice_medio_de_paleta": 0.156,
+    "fracao_area_relativamente_quente": 0.113,
+    "indice_medio_de_paleta": 0.155,
     "fracao_saturada_da_paleta": 0.0
   },
   "recomendacao": {

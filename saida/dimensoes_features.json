@@ -6,5 +6,6 @@
   "mobilenet": 576,
   "dinov2": 384,
   "hibrido_v1": 428,
-  "hibrido": 423
+  "hibrido": 423,
+  "hibrido_mb": 615
 }

@@ -263,7 +263,10 @@ def zipar_overleaf() -> None:
                 *sorted((ART / "tabelas").glob("*.tex")), *sorted((ART / "figuras").glob("*.png"))]
     with zipfile.ZipFile(ART / "artigo_overleaf.zip", "w", zipfile.ZIP_DEFLATED) as z:
         for f in arquivos:
-            z.write(f, f.relative_to(ART).as_posix())
+            # data fixa: o zip só muda quando o conteúdo muda
+            info = zipfile.ZipInfo(f.relative_to(ART).as_posix(), date_time=(2026, 1, 1, 0, 0, 0))
+            info.compress_type = zipfile.ZIP_DEFLATED
+            z.writestr(info, f.read_bytes())
 
 
 if __name__ == "__main__":

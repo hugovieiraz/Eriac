@@ -244,3 +244,27 @@ def perturbar(imagens: np.ndarray, tipo: str, semente: int = config.SEMENTE, int
 
 
 PERTURBACOES = ["ruido", "desfoque", "translacao", "rotacao"]
+
+
+# ---------------------------------------------------------------- oclusão ----
+def mapa_oclusao(img, modelo, extrair, tamanho=40, passo=20) -> np.ndarray:
+    """Queda do alfa previsto quando um quadrado é pintado com a cor mediana do fundo.
+    Positivo = a região empurrava a previsão para cima."""
+    h, w = img.shape[:2]
+    k = max(8, min(h, w) // 12)
+    cantos = np.concatenate((img[:k, :k], img[:k, -k:], img[-k:, :k], img[-k:, -k:]), axis=0).reshape(-1, 3)
+    fundo = np.median(cantos, axis=0).astype(np.uint8)
+    base = float(modelo.predict(extrair(img[None]))[0])
+    posicoes = [(y, x) for y in range(0, h - tamanho + 1, passo) for x in range(0, w - tamanho + 1, passo)]
+    ocultas = []
+    for y, x in posicoes:
+        o = img.copy()
+        o[y:y + tamanho, x:x + tamanho] = fundo
+        ocultas.append(o)
+    queda = base - modelo.predict(extrair(np.stack(ocultas)))
+    soma, conta = np.zeros((h, w)), np.zeros((h, w))
+    for (y, x), q in zip(posicoes, queda):
+        soma[y:y + tamanho, x:x + tamanho] += q
+        conta[y:y + tamanho, x:x + tamanho] += 1
+    return soma / np.maximum(conta, 1)
+

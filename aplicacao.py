@@ -143,6 +143,22 @@ class Diagnosticador:
         return {"registro": registro, "relatorio": texto, "verificacao": rl.verificar(texto, registro),
                 "indicadores": ind.iloc[0].to_dict()}
 
+    def oclusao(self, rgb: np.ndarray) -> dict:
+        """Mapa de oclusão da regressão de α: vermelho onde ocultar a região derruba α
+        (ela puxava a estimativa para cima), azul onde a eleva. Custa ~165 passadas da rede."""
+        from matplotlib import colormaps
+
+        mapa = ft.mapa_oclusao(rgb, self.modelos["regressao"], ft.mobilenet)
+        mascara = ft.mascara_transformador(rgb)
+        positivo = np.clip(mapa, 0, None)
+        limite = max(float(np.abs(mapa).max()), 1e-6)
+        cor = colormaps["RdBu_r"]((mapa / limite + 1) / 2)[..., :3]
+        cinza = (rgb.astype(float) @ [0.299, 0.587, 0.114]) / 255
+        imagem = (0.35 * np.stack([cinza] * 3, axis=-1) + 0.65 * cor) * 255
+        return {"imagem": imagem.astype(np.uint8),
+                "fracao_na_roi": float(positivo[mascara].sum() / max(positivo.sum(), 1e-12)),
+                "escala_espiras": limite * config.TOTAL_ESPIRAS}
+
     def mapas(self, rgb: np.ndarray) -> dict[str, np.ndarray]:
         """Imagens auxiliares para a interface: índice de paleta e ROI com região quente."""
         conv = ConversorPaleta(self.paleta)

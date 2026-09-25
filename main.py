@@ -75,29 +75,6 @@ def auditar_dataset(catalogo, imagens, conversor, dinov2) -> dict:
     }
 
 
-# ---------------------------------------------------------------- oclusão ----
-def mapa_oclusao(img, modelo, extrair, tamanho=40, passo=20) -> np.ndarray:
-    """Queda do alfa previsto quando um quadrado é pintado com a cor mediana do fundo.
-    Positivo = a região empurrava a previsão para cima."""
-    h, w = img.shape[:2]
-    k = max(8, min(h, w) // 12)
-    cantos = np.concatenate((img[:k, :k], img[:k, -k:], img[-k:, :k], img[-k:, -k:]), axis=0).reshape(-1, 3)
-    fundo = np.median(cantos, axis=0).astype(np.uint8)
-    base = float(modelo.predict(extrair(img[None]))[0])
-    posicoes = [(y, x) for y in range(0, h - tamanho + 1, passo) for x in range(0, w - tamanho + 1, passo)]
-    ocultas = []
-    for y, x in posicoes:
-        o = img.copy()
-        o[y:y + tamanho, x:x + tamanho] = fundo
-        ocultas.append(o)
-    queda = base - modelo.predict(extrair(np.stack(ocultas)))
-    soma, conta = np.zeros((h, w)), np.zeros((h, w))
-    for (y, x), q in zip(posicoes, queda):
-        soma[y:y + tamanho, x:x + tamanho] += q
-        conta[y:y + tamanho, x:x + tamanho] += 1
-    return soma / np.maximum(conta, 1)
-
-
 # ------------------------------------------------------------------ main ----
 def main() -> None:
     parser = argparse.ArgumentParser()
@@ -274,7 +251,7 @@ def main() -> None:
                         lambda imgs: ft.indicadores(imgs, conversor).to_numpy()),
     }
     escolhidas = [int(catalogo.index[catalogo.nivel == n][len(catalogo.index[catalogo.nivel == n]) // 2]) for n in (0, 4, 8)]
-    mapas = {i: {m: mapa_oclusao(imagens[i], mod, ext) for m, (mod, ext) in modelos_oclusao.items()} for i in escolhidas}
+    mapas = {i: {m: ft.mapa_oclusao(imagens[i], mod, ext) for m, (mod, ext) in modelos_oclusao.items()} for i in escolhidas}
     mascaras = {i: ft.mascara_transformador(imagens[i]) for i in escolhidas}
     salvar_json({catalogo.arquivo[i]: {m: {"fracao_da_queda_dentro_da_roi": float(np.clip(mapas[i][m], 0, None)[mascaras[i]].sum()
                                                                                    / max(np.clip(mapas[i][m], 0, None).sum(), 1e-12))}

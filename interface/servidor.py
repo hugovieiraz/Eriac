@@ -111,6 +111,18 @@ class Handler(BaseHTTPRequestHandler):
                 except Exception:
                     return self._json({"erro": "Não consegui ler o arquivo como imagem (use BMP, PNG ou JPG)."}, 400)
                 return self._json(self._diagnosticar(rgb, nome, tam))
+            if url.path == "/api/oclusao":
+                n = int(self.headers.get("Content-Length", 0))
+                if not 0 < n <= LIMITE_BYTES:
+                    return self._json({"erro": "Envie uma imagem de até 15 MB."}, 413)
+                try:
+                    rgb, _ = carregar_rgb(self.rfile.read(n))
+                except Exception:
+                    return self._json({"erro": "Não consegui ler o arquivo como imagem."}, 400)
+                with TRAVA:
+                    o = self.modelo.oclusao(rgb)
+                return self._json({"imagem": png_base64(o["imagem"]), "fracao_na_roi": o["fracao_na_roi"],
+                                   "escala_espiras": o["escala_espiras"]})
             if url.path == "/api/diagnosticar_exemplo":
                 caminho = self._exemplo(parse_qs(url.query))
                 if caminho is None:

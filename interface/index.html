@@ -239,6 +239,33 @@ function mostrar(dados, exemplo) {
   for (const [k, t] of [["original", "Termograma"], ["indice", "Índice de paleta (0 a 1)"], ["roi", "Região do transformador e região relativamente quente"]]) {
     const f = el("figure", {}, im); el("img", { src: dados.imagens[k], alt: t }, f); el("figcaption", {}, f, t);
   }
+  const oc = el("div", { class: "acoes" }, r);
+  const bo = el("button", { class: "btn", type: "button" }, oc, "Onde o modelo olhou? (mapa de oclusão, alguns segundos)");
+  const areaOc = el("div", {}, r);
+  bo.addEventListener("click", async () => {
+    bo.disabled = true;
+    areaOc.replaceChildren();
+    const c = el("div", { class: "carregando" }, areaOc);
+    el("span", { class: "spin", "aria-hidden": "true" }, c);
+    el("span", {}, c, "Ocultando cada região da imagem e medindo o efeito no α…");
+    try {
+      const blob = await (await fetch(dados.imagens.original)).blob();
+      const resp = await fetch("/api/oclusao", { method: "POST", body: blob });
+      const o = await resp.json();
+      if (!resp.ok) throw new Error(o.erro || "erro desconhecido");
+      areaOc.replaceChildren();
+      const f = el("figure", { style: "margin:0;max-width:420px;display:grid;gap:4px" }, areaOc);
+      el("img", { src: o.imagem, alt: "Mapa de oclusão", style: "width:100%;border-radius:6px;border:1px solid var(--border)" }, f);
+      el("figcaption", { class: "nota" }, f,
+        `Vermelho: regiões que, ocultadas, derrubam o α estimado (puxavam a estimativa para cima); azul: o contrário. ` +
+        `Escala: ±${fmt(o.escala_espiras, 0)} espiras. ${fmt(o.fracao_na_roi * 100, 0)}% do efeito positivo está na região do transformador.`);
+    } catch (e) {
+      areaOc.replaceChildren();
+      el("div", { class: "aviso erro" }, areaOc, String(e.message || e));
+    } finally {
+      bo.disabled = false;
+    }
+  });
   const dl = el("dl", { class: "kv" }, r);
   const kv = (k, v) => { el("dt", {}, dl, k); el("dd", {}, dl, v); };
   kv("Classe nominal mais próxima", d.classe_nominal_mais_proxima);

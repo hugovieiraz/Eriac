@@ -1,5 +1,17 @@
 # Histórico de mudanças
 
+## 0.3.1: 25/09/2026
+- Interface: botão "Onde o modelo olhou?" com mapa de oclusão da imagem enviada
+  (`aplicacao.Diagnosticador.oclusao`, rota `/api/oclusao`).
+- `experimentos.py abstencao`: com campanha fora do treino, as imagens rejeitadas pelo
+  detector de domínio erram 323 espiras contra 38 das aceitas.
+- `relatorio_llm.gerar_claude_seguro`: erro da API vira relatório vazio reprovado em vez de
+  interromper o lote; `test_llm.py` testa requisição, recusa e erros com SDK simulado.
+- `CARTAO_DO_MODELO.md`: uso previsto, fora do uso previsto e limitações do modelo de
+  aplicação.
+- `features.mapa_oclusao` (movido de `main.py`); zip do Overleaf determinístico.
+- Reprodutibilidade verificada: rodar tudo de novo gera `saida/` byte a byte igual.
+
 ## 0.3.0: 25/09/2026
 
 **Resultados**

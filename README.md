@@ -13,6 +13,7 @@ aviso de imagem fora do domínio e relatório técnico verificado.
 | Diagnosticar um termograma | `interface/servidor.py` ou `diagnosticar.py` |
 | Compilar o artigo | [`artigo/LEIA-ME.md`](artigo/LEIA-ME.md) (pronto para o Overleaf) |
 | Ver o que mudou | [`CHANGELOG.md`](CHANGELOG.md) e [`PLANO.md`](PLANO.md) |
+| Saber para que o modelo serve e não serve | [`CARTAO_DO_MODELO.md`](CARTAO_DO_MODELO.md) |
 
 ## Instalação
 

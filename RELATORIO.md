@@ -220,7 +220,7 @@ campo ele se refere.
 | Peça | Uso |
 |---|---|
 | `diagnosticar.py` | uma imagem ou uma pasta → JSON, relatório `.md`, `resumo.csv` |
-| `interface/servidor.py` | interface web local: arrastar um termograma, ver α com intervalo, índice de paleta, região quente, recomendação, relatório e verificador |
+| `interface/servidor.py` | interface web local: arrastar um termograma, ver α com intervalo, índice de paleta, região quente, recomendação, relatório, verificador e, sob demanda, o mapa de oclusão ("onde o modelo olhou") |
 | `aplicacao.py` | treina, salva (`modelos/`) e carrega o modelo |
 
 Modelo: MobileNetV3-small com aumento de dados; intervalo de 90% de ±22 espiras, calibrado
@@ -241,8 +241,10 @@ tabelas), mas **a primeira compilação no Overleaf pode apontar algum ajuste**.
 
 ## 5. Engenharia
 
-- 34 testes (`test_mvp.py`, `test_extras.py`). Os que precisam do dataset são pulados sem
-  ele; os demais usam dados sintéticos.
+- 40 testes (`test_mvp.py`, `test_extras.py`, `test_llm.py`). Os que precisam do dataset são
+  pulados sem ele; os demais usam dados sintéticos ou um SDK da Anthropic simulado.
+- Reprodutibilidade verificada: rodar tudo de novo gera `saida/` byte a byte igual.
+- Uso previsto e limites do modelo de aplicação em `CARTAO_DO_MODELO.md`.
 - GitHub Actions (`.github/workflows/testes.yml`): a cada envio, instala as dependências,
   baixa o dataset do espelho oficial e roda os testes.
 - `requirements-ci.txt` com versões fixadas.

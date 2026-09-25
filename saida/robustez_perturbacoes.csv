@@ -1,0 +1,16 @@
+conjunto,perturbacao,bin_acuracia,mul_f1_macro,reg_mae_espiras,fora_dominio_fracao
+trivial,nenhuma,1.0,0.9736,9.8012,0.0245
+indicadores,nenhuma,0.9918,1.0,6.6961,0.0245
+mobilenet,nenhuma,1.0,0.9796,8.0619,0.0367
+trivial,ruido,1.0,0.9483,11.7507,0.0316
+trivial,desfoque,1.0,0.9736,9.9902,0.0245
+trivial,translacao,0.988,0.9032,58.0433,0.2601
+trivial,rotacao,1.0,0.9739,18.2012,0.051
+indicadores,ruido,0.5396,0.3774,36.7315,0.9548
+indicadores,desfoque,0.9878,0.9948,8.7775,0.0857
+indicadores,translacao,0.9566,0.9951,18.678,0.0735
+indicadores,rotacao,0.9878,1.0,5.9649,0.0286
+mobilenet,ruido,0.9449,0.6833,36.7118,1.0
+mobilenet,desfoque,0.9257,0.5844,24.8316,0.9385
+mobilenet,translacao,1.0,0.9913,14.4564,0.1957
+mobilenet,rotacao,1.0,0.9726,12.4683,0.0852

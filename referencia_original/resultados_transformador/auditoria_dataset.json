@@ -1,0 +1,72 @@
+{
+  "n_images": 255,
+  "image_sizes": [
+    {
+      "width": 320,
+      "height": 240,
+      "mode": "RGB",
+      "count": 255
+    }
+  ],
+  "counts_by_condition": [
+    {
+      "condition": "Healthy",
+      "turns_short": 0,
+      "alpha": 0.0,
+      "n_images": 22
+    },
+    {
+      "condition": "SC80",
+      "turns_short": 80,
+      "alpha": 0.13333333333333333,
+      "n_images": 26
+    },
+    {
+      "condition": "SC160",
+      "turns_short": 160,
+      "alpha": 0.26666666666666666,
+      "n_images": 31
+    },
+    {
+      "condition": "SC240",
+      "turns_short": 240,
+      "alpha": 0.4,
+      "n_images": 26
+    },
+    {
+      "condition": "SC320",
+      "turns_short": 320,
+      "alpha": 0.5333333333333333,
+      "n_images": 26
+    },
+    {
+      "condition": "SC400",
+      "turns_short": 400,
+      "alpha": 0.6666666666666666,
+      "n_images": 25
+    },
+    {
+      "condition": "SC480",
+      "turns_short": 480,
+      "alpha": 0.8,
+      "n_images": 27
+    },
+    {
+      "condition": "SC560",
+      "turns_short": 560,
+      "alpha": 0.9333333333333333,
+      "n_images": 32
+    },
+    {
+      "condition": "SC600",
+      "turns_short": 600,
+      "alpha": 1.0,
+      "n_images": 40
+    }
+  ],
+  "duplicate_file_hashes": 0,
+  "python": "3.12.7 | packaged by Anaconda, Inc. | (main, Oct  4 2024, 13:17:27) [MSC v.1929 64 bit (AMD64)]",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "torch": "2.7.1+cu118",
+  "cuda_available": true
+}

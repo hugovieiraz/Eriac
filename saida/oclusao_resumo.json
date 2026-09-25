@@ -1,0 +1,26 @@
+{
+  "p1012.bmp": {
+    "mobilenet": {
+      "fracao_da_queda_dentro_da_roi": 0.7781754061688179
+    },
+    "indicadores": {
+      "fracao_da_queda_dentro_da_roi": 0.7663411199943454
+    }
+  },
+  "p5040.bmp": {
+    "mobilenet": {
+      "fracao_da_queda_dentro_da_roi": 0.8094036845689012
+    },
+    "indicadores": {
+      "fracao_da_queda_dentro_da_roi": 0.9987709354704826
+    }
+  },
+  "p9105.bmp": {
+    "mobilenet": {
+      "fracao_da_queda_dentro_da_roi": 0.845967295753037
+    },
+    "indicadores": {
+      "fracao_da_queda_dentro_da_roi": 0.8417669196965449
+    }
+  }
+}

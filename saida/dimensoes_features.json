@@ -1,0 +1,10 @@
+{
+  "trivial": 192,
+  "posicao": 4,
+  "indicadores_v1": 44,
+  "indicadores": 39,
+  "mobilenet": 576,
+  "dinov2": 384,
+  "hibrido_v1": 428,
+  "hibrido": 423
+}

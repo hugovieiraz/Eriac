@@ -1,0 +1,60 @@
+{
+  "identificacao": {
+    "arquivo": "p5042.bmp",
+    "equipamento": "transformador monofásico de bancada",
+    "tipo_de_imagem": "termograma RGB não radiométrico",
+    "resolucao_pixels": [
+      320,
+      240
+    ]
+  },
+  "diagnostico": {
+    "condicao_estimada": "curto entre espiras",
+    "probabilidade_de_defeito": 0.99,
+    "alfa_estimado": 0.54,
+    "nivel_do_intervalo_percentual": 90,
+    "intervalo_alfa": [
+      0.513,
+      0.567
+    ],
+    "espiras_totais_declaradas": 600,
+    "espiras_em_curto_estimadas": 324,
+    "intervalo_espiras": [
+      308,
+      340
+    ],
+    "classe_nominal_mais_proxima": "SC320",
+    "confianca_do_classificador": 0.917
+  },
+  "controle_de_qualidade": {
+    "dentro_do_dominio": true,
+    "score_de_dominio": 0.56,
+    "limiar_do_score_de_dominio": 1.0,
+    "coerencia_visual": 0.89,
+    "concordancia_entre_modulos": true
+  },
+  "indicadores_relativos": {
+    "fracao_area_relativamente_quente": 0.116,
+    "indice_medio_de_paleta": 0.156,
+    "fracao_saturada_da_paleta": 0.0
+  },
+  "recomendacao": {
+    "codigo": "intermediaria",
+    "acao": "Severidade intermediária. Programar ensaios elétricos confirmatórios e avaliar a retirada programada do equipamento.",
+    "origem": "regra determinística com faixas ilustrativas, não normativas"
+  },
+  "limitacoes": [
+    "Imagem não radiométrica: as cores indicam posição relativa na paleta da câmera, não temperatura.",
+    "Temperatura por pixel indisponível; nenhum valor de temperatura é calculado.",
+    "Tempo de aquecimento, carga e corrente no laço em curto não foram informados pelo dataset.",
+    "Modelo avaliado apenas no transformador de bancada do dataset, com curtos artificiais."
+  ],
+  "proveniencia": {
+    "identificacao": "observado",
+    "espiras_totais_declaradas": "fornecido pelo dataset",
+    "diagnostico": "estimado por modelo",
+    "controle_de_qualidade": "calculado",
+    "indicadores_relativos": "calculado a partir da imagem",
+    "recomendacao": "regra determinística"
+  }
+}

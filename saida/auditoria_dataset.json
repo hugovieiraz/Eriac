@@ -1,0 +1,170 @@
+{
+  "n_imagens": 255,
+  "hashes_duplicados": 0,
+  "campanhas": {
+    "A": [
+      "p1_Noload"
+    ],
+    "B": [
+      "p2_80",
+      "p3_160"
+    ],
+    "C": [
+      "p4_240",
+      "p5_320"
+    ],
+    "D": [
+      "p6_400",
+      "p7_480",
+      "p8_560",
+      "p9_600"
+    ]
+  },
+  "imagens_por_condicao": {
+    "Healthy": 22,
+    "SC80": 26,
+    "SC160": 31,
+    "SC240": 26,
+    "SC320": 26,
+    "SC400": 25,
+    "SC480": 27,
+    "SC560": 32,
+    "SC600": 40
+  },
+  "escala_por_condicao": [
+    {
+      "condicao": "Healthy",
+      "min_mean": 0.0,
+      "min_min": 0.0,
+      "min_max": 0.0,
+      "max_mean": 0.13580000400543213,
+      "max_min": 0.13099999725818634,
+      "max_max": 0.1429000049829483,
+      "saturado_mean": 0.0,
+      "saturado_min": 0.0,
+      "saturado_max": 0.0
+    },
+    {
+      "condicao": "SC80",
+      "min_mean": 0.0,
+      "min_min": 0.0,
+      "min_max": 0.0,
+      "max_mean": 0.08839999884366989,
+      "max_min": 0.07540000230073929,
+      "max_max": 0.09920000284910202,
+      "saturado_mean": 0.0,
+      "saturado_min": 0.0,
+      "saturado_max": 0.0
+    },
+    {
+      "condicao": "SC160",
+      "min_mean": 0.00039999998989515007,
+      "min_min": 0.0,
+      "min_max": 0.007899999618530273,
+      "max_mean": 0.1454000025987625,
+      "max_min": 0.1388999968767166,
+      "max_max": 0.15479999780654907,
+      "saturado_mean": 0.0,
+      "saturado_min": 0.0,
+      "saturado_max": 0.0
+    },
+    {
+      "condicao": "SC240",
+      "min_mean": 0.015399999916553497,
+      "min_min": 0.007899999618530273,
+      "min_max": 0.01979999989271164,
+      "max_mean": 0.23280000686645508,
+      "max_min": 0.22220000624656677,
+      "max_max": 0.24210000038146973,
+      "saturado_mean": 0.0,
+      "saturado_min": 0.0,
+      "saturado_max": 0.0
+    },
+    {
+      "condicao": "SC320",
+      "min_mean": 0.015399999916553497,
+      "min_min": 0.007899999618530273,
+      "min_max": 0.023800000548362732,
+      "max_mean": 0.32100000977516174,
+      "max_min": 0.31349998712539673,
+      "max_max": 0.3253999948501587,
+      "saturado_mean": 0.0,
+      "saturado_min": 0.0,
+      "saturado_max": 0.0
+    },
+    {
+      "condicao": "SC400",
+      "min_mean": 0.0,
+      "min_min": 0.0,
+      "min_max": 0.0,
+      "max_mean": 0.4659999907016754,
+      "max_min": 0.4562999904155731,
+      "max_max": 0.48019999265670776,
+      "saturado_mean": 0.0,
+      "saturado_min": 0.0,
+      "saturado_max": 0.0
+    },
+    {
+      "condicao": "SC480",
+      "min_mean": 0.023800000548362732,
+      "min_min": 0.01590000092983246,
+      "min_max": 0.031700000166893005,
+      "max_mean": 0.6373999714851379,
+      "max_min": 0.6269999742507935,
+      "max_max": 0.6547999978065491,
+      "saturado_mean": 0.0,
+      "saturado_min": 0.0,
+      "saturado_max": 0.0
+    },
+    {
+      "condicao": "SC560",
+      "min_mean": 0.024299999698996544,
+      "min_min": 0.01979999989271164,
+      "min_max": 0.031700000166893005,
+      "max_mean": 0.8762000203132629,
+      "max_min": 0.8492000102996826,
+      "max_max": 0.9007999897003174,
+      "saturado_mean": 0.0,
+      "saturado_min": 0.0,
+      "saturado_max": 0.0
+    },
+    {
+      "condicao": "SC600",
+      "min_mean": 0.016599999740719795,
+      "min_min": 0.007899999618530273,
+      "min_max": 0.023800000548362732,
+      "max_mean": 0.9994999766349792,
+      "max_min": 0.9840999841690063,
+      "max_max": 1.0,
+      "saturado_mean": 0.0003,
+      "saturado_min": 0.0,
+      "saturado_max": 0.0011
+    }
+  ],
+  "quase_duplicatas": {
+    "vizinho_mais_proximo_mesma_classe": 0.9882352941176471,
+    "vizinho_mais_proximo_quadro_adjacente": 0.3568627450980392,
+    "vizinho_mais_proximo_ate_3_quadros": 0.592156862745098,
+    "cosseno_quadro_adjacente_mediana": 0.980024516582489,
+    "cosseno_outra_classe_mais_proxima_mediana": 0.9663170576095581
+  },
+  "paleta": {
+    "cores_distintas": 253,
+    "cores_no_caminho": 253,
+    "distancia_maxima_fora_do_caminho": 0.0,
+    "fracao_passos_luminancia_crescente": 0.9880952380952381,
+    "passo_rgb_mediano": 2.8284271247461903,
+    "passo_rgb_maximo": 38.0,
+    "cor_inicial": [
+      5,
+      0,
+      94
+    ],
+    "cor_final": [
+      255,
+      255,
+      255
+    ],
+    "pixels_por_cor_minimo": 153
+  }
+}

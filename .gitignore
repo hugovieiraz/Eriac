@@ -1,0 +1,9 @@
+# Dataset de terceiros (Najafi et al., Mendeley Data): baixar pelo README, não redistribuir
+dados/
+
+# Gerados localmente
+cache/
+__pycache__/
+.pytest_cache/
+saida_log.txt
+*.pyc

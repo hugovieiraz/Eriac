@@ -28,6 +28,18 @@ baixar os dados (seção abaixo):
 
 A execução completa leva poucos minutos em CPU. Tudo sai em `saida/`.
 
+## Painel interativo
+
+`painel/index.html` abre direto no navegador (duplo clique), sem servidor e sem internet.
+Mostra a validação aleatória × blocos, a severidade e a campanha não vistas, a robustez, o
+verificador e um explorador das 255 imagens (α previsto, intervalo de 90%, aviso de domínio,
+recomendação e o relatório gerado). Os termogramas aparecem quando o dataset está em
+`dados/IR_trans_bmp/`. Depois de rodar `main.py` de novo, atualize o painel:
+
+```bash
+.venv/Scripts/python.exe gerar_painel.py
+```
+
 Relatórios pelo Claude (requer `pip install anthropic` e uma credencial da Anthropic no
 ambiente, como `ANTHROPIC_API_KEY`):
 
@@ -75,6 +87,7 @@ vêm os vetores DINOv2 (conferidos imagem a imagem por SHA-256) e os 44 indicado
 | `figuras.py` | Figuras do artigo |
 | `main.py` | Orquestra tudo |
 | `extrair_dinov2.py` | Regenera DINOv2 (manual) |
+| `gerar_painel.py` | Gera `painel/index.html` a partir de `saida/` e de `painel/modelo.html` |
 | `test_mvp.py` | 18 testes das peças que invalidariam números em silêncio |
 
 Os resultados e a discussão estão em `RELATORIO.md`.

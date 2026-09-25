@@ -1,0 +1,783 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Painel MVP ERIAC</title>
+<style>
+:root {
+  color-scheme: light;
+  --page: #f9f9f7;
+  --surface: #fcfcfb;
+  --ink: #0b0b0b;
+  --ink-2: #52514e;
+  --muted: #6c6a65;
+  --axis-text: #898781;
+  --grid: #e1e0d9;
+  --axis: #c3c2b7;
+  --border: rgba(11, 11, 11, 0.10);
+  --s1: #2a78d6;
+  --s2: #eb6834;
+  --good: #0ca30c;
+  --warning: #fab219;
+  --serious: #ec835a;
+  --critical: #d03b3b;
+  --good-text: #006300;
+  --crit-text: #b3261e;
+  --hover: rgba(11, 11, 11, 0.045);
+  --select: rgba(42, 120, 214, 0.12);
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: ui-monospace, "Cascadia Mono", Consolas, "SF Mono", monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --page: #0d0d0d;
+    --surface: #1a1a19;
+    --ink: #ffffff;
+    --ink-2: #c3c2b7;
+    --muted: #a3a197;
+    --axis-text: #898781;
+    --grid: #2c2c2a;
+    --axis: #383835;
+    --border: rgba(255, 255, 255, 0.10);
+    --s1: #3987e5;
+    --s2: #d95926;
+    --good-text: #0ca30c;
+    --crit-text: #f08a84;
+    --hover: rgba(255, 255, 255, 0.05);
+    --select: rgba(57, 135, 229, 0.18);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0d0d0d;
+  --surface: #1a1a19;
+  --ink: #ffffff;
+  --ink-2: #c3c2b7;
+  --muted: #a3a197;
+  --axis-text: #898781;
+  --grid: #2c2c2a;
+  --axis: #383835;
+  --border: rgba(255, 255, 255, 0.10);
+  --s1: #3987e5;
+  --s2: #d95926;
+  --good-text: #0ca30c;
+  --crit-text: #f08a84;
+  --hover: rgba(255, 255, 255, 0.05);
+  --select: rgba(57, 135, 229, 0.18);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--page); color: var(--ink); font-family: var(--sans); font-size: 15px; line-height: 1.5;
+  padding-inline: 20px; padding-block: 0 56px;
+}
+.page { max-width: 1120px; margin: 0 auto; }
+header { padding-block: 32px 20px; display: grid; gap: 8px; }
+.eyebrow { font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+h1 { font-size: clamp(26px, 4vw, 34px); line-height: 1.15; margin: 0; text-wrap: balance; }
+.sub { color: var(--ink-2); max-width: 70ch; margin: 0; }
+nav {
+  position: sticky; top: 0; z-index: 5; background: var(--page); display: flex; flex-wrap: wrap; gap: 4px 18px;
+  padding-block: 10px; border-bottom: 1px solid var(--grid); font-size: 14px;
+}
+nav a { color: var(--ink-2); text-decoration: none; }
+nav a:hover, nav a:focus-visible { color: var(--ink); text-decoration: underline; }
+
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 20px; }
+.tile { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; display: grid; gap: 2px; }
+.tile .v { font-size: 30px; font-weight: 600; line-height: 1.1; }
+.tile .k { font-size: 13px; color: var(--ink-2); }
+.tile .c { font-size: 12px; color: var(--muted); }
+
+section { padding-block: 32px 4px; display: grid; gap: 12px; scroll-margin-top: 48px; }
+h2 { font-size: 22px; margin: 0; text-wrap: balance; }
+.lead { color: var(--ink-2); margin: 0; max-width: 78ch; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; display: grid; gap: 12px; min-width: 0; }
+.row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
+.grid2 { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 16px; }
+.chart { width: 100%; min-width: 0; position: relative; }
+.chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.hint { font-size: 13px; color: var(--muted); margin: 0; }
+
+.seg { display: inline-flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+.seg button {
+  font: inherit; font-size: 13px; padding: 5px 12px; background: transparent; color: var(--ink-2); border: 0; cursor: pointer;
+}
+.seg button + button { border-left: 1px solid var(--border); }
+.seg button[aria-pressed="true"] { background: var(--select); color: var(--ink); font-weight: 600; }
+.seg button:focus-visible, select:focus-visible, input:focus-visible, .rowbtn:focus-visible, tr[tabindex]:focus-visible {
+  outline: 2px solid var(--s1); outline-offset: 1px;
+}
+label.f { display: grid; gap: 3px; font-size: 12px; color: var(--muted); }
+select {
+  font: inherit; font-size: 14px; padding: 5px 8px; border-radius: 6px; border: 1px solid var(--border);
+  background: var(--surface); color: var(--ink);
+}
+.check { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; color: var(--ink-2); }
+
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--ink-2); align-items: center; }
+.legend .sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+.legend .ramp { display: inline-flex; border-radius: 3px; overflow: hidden; margin-inline: 6px; }
+.legend .ramp span { width: 22px; height: 10px; }
+
+svg text { font-family: var(--sans); }
+.ax { fill: var(--axis-text); font-size: 11px; font-variant-numeric: tabular-nums; }
+.lab { fill: var(--ink-2); font-size: 12px; }
+.val { fill: var(--ink); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+.gl { stroke: var(--grid); stroke-width: 1; }
+.base { stroke: var(--axis); stroke-width: 1; }
+.ref { stroke: var(--axis); stroke-width: 1; }
+.s1f { fill: var(--s1); }
+.s2f { fill: var(--s2); }
+.s1s { stroke: var(--s1); }
+.ring { stroke: var(--surface); stroke-width: 2; }
+.warnf { fill: var(--warning); }
+.hit { fill: transparent; cursor: pointer; }
+.selrow { fill: var(--select); }
+
+#tip {
+  position: fixed; z-index: 20; pointer-events: none; background: var(--surface); color: var(--ink);
+  border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; font-size: 12.5px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12); max-width: 260px; display: grid; gap: 3px;
+}
+#tip .tv { font-weight: 600; font-size: 14px; font-variant-numeric: tabular-nums; }
+#tip .tl { color: var(--ink-2); }
+#tip .key { display: inline-block; width: 12px; height: 2px; margin-right: 6px; vertical-align: 3px; }
+
+details { font-size: 14px; }
+summary { cursor: pointer; color: var(--ink-2); }
+.tbl { overflow-x: auto; margin-top: 8px; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th, td { padding: 6px 10px; border-bottom: 1px solid var(--grid); text-align: left; white-space: nowrap; }
+th { color: var(--muted); font-weight: 600; font-size: 12px; position: sticky; top: 0; background: var(--surface); }
+td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
+.list { max-height: 330px; overflow: auto; border: 1px solid var(--grid); border-radius: 6px; }
+.list tr[tabindex] { cursor: pointer; }
+.list tr[tabindex]:hover td { background: var(--hover); }
+.list tr[aria-selected="true"] td { background: var(--select); }
+
+.rowbtn { font: inherit; background: none; border: 0; padding: 0; color: inherit; cursor: pointer; text-align: right; }
+
+.chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; padding: 2px 9px 2px 7px; border-radius: 999px; border: 1px solid var(--border); color: var(--ink); white-space: nowrap; }
+.chip i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; font-style: normal; }
+.chip.sem_indicio i { background: var(--good); }
+.chip.baixa i { background: var(--warning); }
+.chip.intermediaria i { background: var(--serious); }
+.chip.elevada i { background: var(--critical); }
+.chip.fora_do_dominio i, .chip.inconsistente i { background: transparent; border: 2px solid var(--muted); border-radius: 2px; }
+.ok { color: var(--good-text); font-weight: 600; }
+.fail { color: var(--crit-text); font-weight: 600; }
+
+.detail { display: grid; grid-template-columns: minmax(0, 320px) minmax(0, 1fr); gap: 16px; align-items: start; }
+.thumb { width: 100%; aspect-ratio: 4 / 3; border-radius: 6px; border: 1px solid var(--border); background: var(--page); display: grid; place-items: center; overflow: hidden; }
+.thumb img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.thumb p { margin: 0; padding: 12px; font-size: 13px; color: var(--muted); text-align: center; }
+dl.kv { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; margin: 0; font-size: 14px; }
+dl.kv dt { color: var(--muted); }
+dl.kv dd { margin: 0; font-variant-numeric: tabular-nums; }
+pre.rel {
+  margin: 0; white-space: pre-wrap; font-family: var(--mono); font-size: 12.5px; line-height: 1.6; background: var(--page);
+  border: 1px solid var(--grid); border-radius: 6px; padding: 12px; max-height: 360px; overflow: auto;
+}
+footer { margin-top: 40px; padding-top: 14px; border-top: 1px solid var(--grid); font-size: 12.5px; color: var(--muted); }
+@media (max-width: 820px) {
+  .grid2, .detail { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div class="eyebrow">XXI ERIAC · CE A2 · curto entre espiras por termografia</div>
+    <h1>Painel de resultados do MVP</h1>
+    <p class="sub">Resultados de <code>main.py</code> sobre as 255 imagens do transformador. Passe o mouse nos gráficos para ver os valores; cada gráfico tem a tabela correspondente logo abaixo.</p>
+    <div class="tiles" id="tiles"></div>
+  </header>
+  <nav aria-label="Seções">
+    <a href="#validacao">Validação</a>
+    <a href="#severidade">Severidade não vista</a>
+    <a href="#campanha">Campanha não vista</a>
+    <a href="#imagens">Explorar imagens</a>
+    <a href="#robustez">Robustez</a>
+    <a href="#verificador">Verificador</a>
+  </nav>
+
+  <section id="validacao">
+    <h2>Validação cruzada: aleatória × blocos temporais</h2>
+    <p class="lead">Na divisão aleatória, quadros quase idênticos caem no treino e no teste. Nos blocos temporais, cada dobra testa um trecho contínuo que o modelo não viu. Quase todos os conjuntos ficam no teto nos dois esquemas, inclusive a miniatura 16×12.</p>
+    <div class="card">
+      <div class="row">
+        <div class="seg" role="group" aria-label="Métrica">
+          <button type="button" id="v-f1" aria-pressed="true">F1-macro (9 classes)</button>
+          <button type="button" id="v-mae" aria-pressed="false">MAE (espiras)</button>
+        </div>
+        <div class="legend"><span><span class="sw" style="background:var(--s1)"></span>Aleatória por imagem</span><span><span class="sw" style="background:var(--s2)"></span>Blocos temporais + purga</span></div>
+      </div>
+      <div class="chart" id="c-validacao"></div>
+      <details><summary>Ver tabela</summary><div class="tbl" id="t-validacao"></div></details>
+    </div>
+  </section>
+
+  <section id="severidade">
+    <h2>Severidade não vista no treinamento</h2>
+    <p class="lead">Cada severidade intermediária sai inteira do treino. Os valores são o erro médio em espiras (de 600); a cor segue a escala da legenda, do menor ao maior erro. Clique em um conjunto para ver as previsões dele no gráfico ao lado.</p>
+    <div class="grid2">
+      <div class="card">
+        <div class="legend" id="lg-interp"></div>
+        <div class="chart" id="c-interp"></div>
+      </div>
+      <div class="card">
+        <p class="hint" id="interp-titulo"></p>
+        <div class="chart" id="c-interp-linha"></div>
+        <p class="hint">Média ± desvio-padrão do α previsto para cada severidade retirada. A linha cinza é a previsão perfeita.</p>
+      </div>
+    </div>
+    <details><summary>Ver tabela</summary><div class="tbl" id="t-interp"></div></details>
+  </section>
+
+  <section id="campanha">
+    <h2>Campanha de aquisição não vista</h2>
+    <p class="lead">Uma campanha inteira sai do treino, junto com o enquadramento da câmera. B e C exigem interpolação; A e D exigiriam extrapolação, e o modelo falha nelas. Erro médio em espiras.</p>
+    <div class="card">
+      <div class="legend" id="lg-camp"></div>
+      <div class="chart" id="c-camp"></div>
+      <details><summary>Ver tabela</summary><div class="tbl" id="t-camp"></div></details>
+    </div>
+  </section>
+
+  <section id="imagens">
+    <h2>Explorar imagens</h2>
+    <p class="lead">Previsões do modelo principal (DINOv2 + indicadores de paleta) fora da dobra, nos blocos temporais. Cada ponto é uma imagem; a barra vertical é o intervalo de 90%. Clique em um ponto ou em uma linha da lista.</p>
+    <div class="card">
+      <div class="row">
+        <label class="f" for="f-cond">Condição<select id="f-cond"></select></label>
+        <label class="f" for="f-camp">Campanha<select id="f-camp"></select></label>
+        <label class="f" for="f-rec">Recomendação<select id="f-rec"></select></label>
+        <label class="check" for="f-ood"><input type="checkbox" id="f-ood"> Só fora do domínio</label>
+        <span class="hint" id="f-count"></span>
+      </div>
+      <div class="legend"><span><span class="sw" style="background:var(--s1);border-radius:50%"></span>Imagem dentro do domínio</span><span><svg width="14" height="12" aria-hidden="true" style="margin-right:6px;vertical-align:-1px"><path d="M7 1 L13 11 L1 11 Z" fill="var(--warning)"/></svg>Fora do domínio (aviso)</span></div>
+      <div class="chart" id="c-scatter"></div>
+      <div class="detail" id="detalhe"></div>
+      <div class="list tbl" id="t-imagens"></div>
+    </div>
+  </section>
+
+  <section id="robustez">
+    <h2>Robustez a imagens degradadas</h2>
+    <p class="lead">Modelos treinados em imagens limpas e testados em imagens com ruído, desfoque, translação ou rotação. DINOv2 e o híbrido entram aqui depois de rodar <code>extrair_dinov2.py</code>.</p>
+    <div class="card">
+      <div class="row">
+        <div class="seg" role="group" aria-label="Métrica de robustez">
+          <button type="button" id="r-mae" aria-pressed="true">MAE (espiras)</button>
+          <button type="button" id="r-f1" aria-pressed="false">F1-macro</button>
+          <button type="button" id="r-ood" aria-pressed="false">Fora do domínio</button>
+        </div>
+        <div class="legend" id="lg-rob"></div>
+      </div>
+      <div class="chart" id="c-rob"></div>
+      <details><summary>Ver tabela</summary><div class="tbl" id="t-rob"></div></details>
+    </div>
+  </section>
+
+  <section id="verificador">
+    <h2>Verificador dos relatórios</h2>
+    <p class="lead">Erros injetados de propósito em cada um dos 255 relatórios, para medir quantos o verificador reprova. Afirmar "vida útil" gera alerta em vez de reprovação.</p>
+    <div class="card">
+      <div class="chart" id="c-verif"></div>
+      <details><summary>Ver tabela</summary><div class="tbl" id="t-verif"></div></details>
+    </div>
+  </section>
+
+  <footer id="rodape"></footer>
+</div>
+<div id="tip" hidden></div>
+
+<script>
+const D = /*__DADOS__*/null;
+
+const NOMES = {
+  trivial: "Miniatura 16×12", posicao: "Posição (controle)", indicadores_v1: "Indicadores v1",
+  indicadores: "Indicadores de paleta", mobilenet: "MobileNetV3", dinov2: "DINOv2",
+  hibrido_v1: "DINOv2 + ind. v1", hibrido: "DINOv2 + ind. de paleta"
+};
+const ORDEM = ["trivial", "posicao", "indicadores_v1", "indicadores", "mobilenet", "dinov2", "hibrido_v1", "hibrido"];
+const REC = { sem_indicio: "Sem indício", baixa: "Baixa", intermediaria: "Intermediária", elevada: "Elevada",
+              fora_do_dominio: "Fora do domínio", inconsistente: "Inconsistente" };
+const PERT = { nenhuma: "Nenhuma", ruido: "Ruído σ = 8", desfoque: "Desfoque σ = 1,5", translacao: "Translação 12 px", rotacao: "Rotação 4°" };
+const MUT = { temperatura_inventada: "Temperatura inventada", corrente_inventada: "Corrente inventada",
+              espiras_recalculadas: "Espiras recalculadas", recomendacao_trocada: "Recomendação trocada",
+              limitacoes_omitidas: "Limitações omitidas", numero_alterado: "α alterado", vida_util_afirmada: "“Vida útil” afirmada" };
+const RAMPA_CLARA = ["#cde2fb", "#9ec5f4", "#6da7ec", "#3987e5", "#256abf", "#184f95", "#0d366b"];
+const RAMPA_ESCURA = ["#0d366b", "#104281", "#184f95", "#256abf", "#3987e5", "#6da7ec", "#9ec5f4"];
+const NS = "http://www.w3.org/2000/svg";
+
+// ------------------------------------------------------------------ utilitários
+const fmt = (v, casas = 1) => Number(v).toLocaleString("pt-BR", { minimumFractionDigits: casas, maximumFractionDigits: casas });
+const pct = (v, casas = 0) => fmt(v * 100, casas) + "%";
+function el(tag, attrs = {}, pai, texto) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+  if (texto !== undefined) e.textContent = texto;
+  if (pai) pai.appendChild(e);
+  return e;
+}
+function sv(tag, attrs = {}, pai, texto) {
+  const e = document.createElementNS(NS, tag);
+  for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+  if (texto !== undefined) e.textContent = texto;
+  if (pai) pai.appendChild(e);
+  return e;
+}
+const escuro = () => {
+  const t = document.documentElement.getAttribute("data-theme");
+  return t ? t === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+};
+const rampa = () => (escuro() ? RAMPA_ESCURA : RAMPA_CLARA);
+function corTexto(i) { return escuro() ? (i >= 5 ? "#0b0b0b" : "#ffffff") : (i >= 3 ? "#ffffff" : "#0b0b0b"); }
+function bin(v, limites) { let i = 0; while (i < limites.length && v >= limites[i]) i++; return i; }
+function largura(c) { return Math.max(300, c.clientWidth || 600); }
+
+// Tooltip: valor em destaque, rótulo depois; montado só com textContent.
+const tip = document.getElementById("tip");
+function mostrar(ev, linhas) {
+  tip.replaceChildren();
+  for (const l of linhas) {
+    const d = el("div", {}, tip);
+    if (l.cor) el("span", { class: "key", style: `background:${l.cor}` }, d);
+    el("span", { class: l.forte ? "tv" : "tl" }, d, l.t);
+  }
+  tip.hidden = false;
+  const r = tip.getBoundingClientRect();
+  let x = ev.clientX + 14, y = ev.clientY + 14;
+  if (x + r.width > innerWidth - 8) x = ev.clientX - r.width - 14;
+  if (y + r.height > innerHeight - 8) y = ev.clientY - r.height - 14;
+  tip.style.left = x + "px"; tip.style.top = y + "px";
+}
+function esconder() { tip.hidden = true; }
+function comDica(alvo, linhas) {
+  alvo.addEventListener("pointermove", (e) => mostrar(e, linhas()));
+  alvo.addEventListener("pointerleave", esconder);
+}
+
+function tabela(container, cab, linhas, numericas = []) {
+  container.replaceChildren();
+  const t = el("table", {}, container);
+  const tr = el("tr", {}, el("thead", {}, t));
+  cab.forEach((c, i) => el("th", numericas.includes(i) ? { class: "n" } : {}, tr, c));
+  const tb = el("tbody", {}, t);
+  for (const l of linhas) {
+    const r = el("tr", {}, tb);
+    l.forEach((c, i) => el("td", numericas.includes(i) ? { class: "n" } : {}, r, c));
+  }
+  return t;
+}
+
+function legendaRampa(container, limites, rotulo, formatar) {
+  container.replaceChildren();
+  el("span", {}, container, rotulo);
+  const r = el("span", { class: "ramp", "aria-hidden": "true" }, container);
+  rampa().forEach((c) => el("span", { style: `background:${c}` }, r));
+  el("span", {}, container, `${formatar(0)} → ${formatar(limites[limites.length - 1])}+`);
+}
+
+// ------------------------------------------------------------------ tiles
+function tiles() {
+  const r = (c, e) => D.resumo.find((x) => x.conjunto === c && x.esquema === e);
+  const media = (arr) => arr.reduce((a, b) => a + b, 0) / arr.length;
+  const interp = media(D.interpolacao.filter((x) => x.conjunto === "hibrido").map((x) => x.mae_espiras));
+  const camp = D.campanha.filter((x) => x.conjunto === "hibrido" && x.tipo === "interpolacao");
+  const verif = D.verificador.filter((x) => x.mutacao !== "vida_util_afirmada").map((x) => x.reprovados);
+  const itens = [
+    [fmt(r("hibrido", "blocos").mul_f1_macro, 3), "F1-macro nos blocos temporais", `miniatura 16×12: ${fmt(r("trivial", "blocos").mul_f1_macro, 3)}`],
+    [fmt(interp, 1) + " espiras", "erro com severidade não vista", "média das 7 severidades retiradas"],
+    [fmt(camp.reduce((a, x) => a + x.mae_espiras * x.n_teste, 0) / camp.reduce((a, x) => a + x.n_teste, 0), 1) + " espiras", "erro com campanha não vista", "campanhas B e C (interpolação)"],
+    [`${pct(Math.min(...verif), 1)}–${pct(Math.max(...verif), 0)}`, "erros injetados reprovados", "6 tipos × 255 relatórios"],
+  ];
+  const c = document.getElementById("tiles");
+  c.replaceChildren();
+  for (const [v, k, cc] of itens) {
+    const t = el("div", { class: "tile" }, c);
+    el("span", { class: "v" }, t, v); el("span", { class: "k" }, t, k); el("span", { class: "c" }, t, cc);
+  }
+}
+
+// ------------------------------------------------------------------ validação
+let metricaVal = "f1";
+function validacao() {
+  const c = document.getElementById("c-validacao");
+  c.replaceChildren();
+  const W = largura(c), rotW = Math.min(170, W * 0.38), linhaH = 34, topo = 8, H = topo + ORDEM.length * linhaH + 26;
+  const x0 = rotW + 8, x1 = W - 44;
+  const campo = metricaVal === "f1" ? "mul_f1_macro" : "reg_mae_espiras";
+  const vals = D.resumo.map((r) => r[campo]);
+  const max = metricaVal === "f1" ? 1 : Math.ceil(Math.max(...vals) / 10) * 10;
+  const X = (v) => x0 + (v / max) * (x1 - x0);
+  const s = sv("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Barras por conjunto de features, divisão aleatória e blocos temporais" }, c);
+  const ticks = metricaVal === "f1" ? [0, 0.2, 0.4, 0.6, 0.8, 1] : Array.from({ length: 6 }, (_, i) => (max / 5) * i);
+  for (const t of ticks) {
+    sv("line", { x1: X(t), x2: X(t), y1: topo, y2: H - 22, class: "gl" }, s);
+    sv("text", { x: X(t), y: H - 6, "text-anchor": "middle", class: "ax" }, s, metricaVal === "f1" ? fmt(t, 1) : fmt(t, 0));
+  }
+  sv("line", { x1: x0, x2: x0, y1: topo, y2: H - 22, class: "base" }, s);
+  const esquemas = [["aleatoria", "s1f", "Aleatória por imagem", "var(--s1)"], ["blocos", "s2f", "Blocos temporais + purga", "var(--s2)"]];
+  ORDEM.forEach((conj, i) => {
+    const y = topo + i * linhaH;
+    sv("text", { x: rotW, y: y + linhaH / 2 + 4, "text-anchor": "end", class: "lab" }, s, NOMES[conj]);
+    esquemas.forEach(([esq, cls, nome, cor], k) => {
+      const r = D.resumo.find((x) => x.conjunto === conj && x.esquema === esq);
+      const v = r[campo], bh = 11, by = y + 5 + k * (bh + 2);
+      const w = Math.max(1, X(v) - x0);
+      sv("path", { d: barra(x0, by, w, bh), class: cls }, s);
+      if (esq === "blocos") sv("text", { x: X(v) + 5, y: by + bh - 1.5, class: "val" }, s, metricaVal === "f1" ? fmt(v, 3) : fmt(v, 1));
+      const hit = sv("rect", { x: x0, y: by - 1, width: Math.max(w, 24), height: bh + 2, class: "hit" }, s);
+      comDica(hit, () => [
+        { t: metricaVal === "f1" ? fmt(v, 3) : `${fmt(v, 1)} espiras`, forte: true, cor },
+        { t: `${nome} · ${NOMES[conj]}` },
+        { t: `desvio-padrão entre dobras: ${metricaVal === "f1" ? fmt(r.mul_f1_macro_dp, 3) : fmt(r.reg_mae_espiras_dp, 1)}` },
+      ]);
+    });
+  });
+  tabela(document.getElementById("t-validacao"),
+    ["Conjunto", "F1 aleatória", "F1 blocos", "MAE aleatória (espiras)", "MAE blocos (espiras)"],
+    ORDEM.map((c) => {
+      const a = D.resumo.find((x) => x.conjunto === c && x.esquema === "aleatoria");
+      const b = D.resumo.find((x) => x.conjunto === c && x.esquema === "blocos");
+      return [NOMES[c], fmt(a.mul_f1_macro, 3), fmt(b.mul_f1_macro, 3), fmt(a.reg_mae_espiras, 1), fmt(b.reg_mae_espiras, 1)];
+    }), [1, 2, 3, 4]);
+}
+// Barra horizontal: base reta, ponta arredondada de 4px.
+function barra(x, y, w, h) {
+  const r = Math.min(4, w, h / 2);
+  return `M${x},${y} H${x + w - r} Q${x + w},${y} ${x + w},${y + r} V${y + h - r} Q${x + w},${y + h} ${x + w - r},${y + h} H${x} Z`;
+}
+
+// ------------------------------------------------------------------ mapa de calor
+const LIM_MAE = [5, 10, 20, 40, 80, 160];
+function mapaCalor(c, { linhas, colunas, valor, rotuloLinha, cabecalho, selecionada, aoClicar, limites, formatar, dica, grupos }) {
+  c.replaceChildren();
+  const W = largura(c), rotW = Math.min(170, W * 0.34), cabH = grupos ? 40 : 24, celH = 30;
+  const cw = (W - rotW - 8) / colunas.length, H = cabH + linhas.length * celH + 4;
+  const s = sv("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Mapa de calor" }, c);
+  const R = rampa();
+  if (grupos) {
+    for (const g of grupos) {
+      const xa = rotW + 8 + g.de * cw, xb = rotW + 8 + (g.ate + 1) * cw;
+      if (g.fundo) sv("rect", { x: xa + 1, y: 0, width: xb - xa - 2, height: 16, rx: 3, fill: "var(--hover)" }, s);
+      sv("text", { x: (xa + xb) / 2, y: 12, "text-anchor": "middle", class: "ax" }, s, g.rotulo);
+    }
+  }
+  colunas.forEach((col, j) => sv("text", { x: rotW + 8 + (j + 0.5) * cw, y: cabH - 8, "text-anchor": "middle", class: "lab" }, s, cabecalho(col, cw)));
+  linhas.forEach((lin, i) => {
+    const y = cabH + i * celH;
+    if (lin === selecionada) sv("rect", { x: 0, y, width: W, height: celH, class: "selrow", rx: 4 }, s);
+    const t = sv("text", { x: rotW, y: y + celH / 2 + 4, "text-anchor": "end", class: "lab", style: aoClicar ? "cursor:pointer" : "" }, s, rotuloLinha(lin));
+    if (lin === selecionada) t.setAttribute("style", "font-weight:600;fill:var(--ink);cursor:pointer");
+    colunas.forEach((col, j) => {
+      const v = valor(lin, col);
+      if (v === null || v === undefined) return;
+      const b = bin(v, limites), x = rotW + 8 + j * cw;
+      sv("rect", { x: x + 1, y: y + 1, width: cw - 2, height: celH - 2, rx: 3, fill: R[b] }, s);
+      sv("text", { x: x + cw / 2, y: y + celH / 2 + 4, "text-anchor": "middle", fill: corTexto(b), style: "font-size:11.5px;font-variant-numeric:tabular-nums" }, s, formatar(v));
+      const hit = sv("rect", { x: x + 1, y: y + 1, width: cw - 2, height: celH - 2, class: "hit" }, s);
+      comDica(hit, () => dica(lin, col, v));
+      if (aoClicar) hit.addEventListener("click", () => aoClicar(lin));
+    });
+    if (aoClicar) {
+      const alvo = sv("rect", { x: 0, y, width: rotW + 4, height: celH, class: "hit", tabindex: 0, role: "button", "aria-label": `Selecionar ${rotuloLinha(lin)}` }, s);
+      alvo.addEventListener("click", () => aoClicar(lin));
+      alvo.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); aoClicar(lin); } });
+    }
+  });
+}
+
+// ------------------------------------------------------------------ severidade não vista
+let conjuntoInterp = "hibrido";
+function interpolacao() {
+  const conds = D.classes.slice(1, 8);
+  const media = (c) => { const v = D.interpolacao.filter((x) => x.conjunto === c).map((x) => x.mae_espiras); return v.reduce((a, b) => a + b, 0) / v.length; };
+  legendaRampa(document.getElementById("lg-interp"), LIM_MAE, "Erro (espiras)", (v) => fmt(v, 0));
+  mapaCalor(document.getElementById("c-interp"), {
+    linhas: ORDEM, colunas: [...conds, "Média"], selecionada: conjuntoInterp, limites: LIM_MAE,
+    rotuloLinha: (l) => NOMES[l], cabecalho: (c, cw) => (cw < 44 && c !== "Média" ? c.replace("SC", "") : c),
+    valor: (l, c) => (c === "Média" ? media(l) : D.interpolacao.find((x) => x.conjunto === l && x.condicao_retirada === c)?.mae_espiras),
+    formatar: (v) => fmt(v, 0),
+    dica: (l, c, v) => {
+      if (c === "Média") return [{ t: `${fmt(v, 1)} espiras`, forte: true }, { t: `${NOMES[l]} · média das 7 severidades` }];
+      const r = D.interpolacao.find((x) => x.conjunto === l && x.condicao_retirada === c);
+      return [{ t: `${fmt(v, 1)} espiras`, forte: true }, { t: `${NOMES[l]} · ${c} fora do treino` },
+              { t: `α previsto ${fmt(r.alfa_previsto_medio, 3)} (real ${fmt(r.alfa_real, 3)})` },
+              { t: `nível certo em ${pct(r.nivel_mais_proximo_correto)} · fora do domínio ${pct(r.fora_dominio_fracao)}` }];
+    },
+    aoClicar: (l) => { conjuntoInterp = l; interpolacao(); },
+  });
+  interpolacaoLinha(conds);
+  tabela(document.getElementById("t-interp"), ["Conjunto", ...conds, "Média"],
+    ORDEM.map((l) => [NOMES[l], ...conds.map((c) => fmt(D.interpolacao.find((x) => x.conjunto === l && x.condicao_retirada === c).mae_espiras, 1)), fmt(media(l), 1)]),
+    Array.from({ length: conds.length + 1 }, (_, i) => i + 1));
+}
+function interpolacaoLinha(conds) {
+  const c = document.getElementById("c-interp-linha");
+  document.getElementById("interp-titulo").textContent = `α previsto × α real: ${NOMES[conjuntoInterp]}`;
+  c.replaceChildren();
+  const W = largura(c), H = Math.min(340, W * 0.85), m = { l: 40, r: 12, t: 10, b: 32 };
+  const X = (v) => m.l + v * (W - m.l - m.r), Y = (v) => H - m.b - v * (H - m.t - m.b);
+  const s = sv("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": `Previsões de severidade não vista para ${NOMES[conjuntoInterp]}` }, c);
+  for (const t of [0, 0.2, 0.4, 0.6, 0.8, 1]) {
+    sv("line", { x1: X(t), x2: X(t), y1: m.t, y2: H - m.b, class: "gl" }, s);
+    sv("line", { x1: m.l, x2: W - m.r, y1: Y(t), y2: Y(t), class: "gl" }, s);
+    sv("text", { x: X(t), y: H - m.b + 16, "text-anchor": "middle", class: "ax" }, s, fmt(t, 1));
+    sv("text", { x: m.l - 6, y: Y(t) + 4, "text-anchor": "end", class: "ax" }, s, fmt(t, 1));
+  }
+  sv("line", { x1: X(0), y1: Y(0), x2: X(1), y2: Y(1), class: "ref" }, s);
+  sv("text", { x: W - m.r, y: H - 4, "text-anchor": "end", class: "ax" }, s, "α real");
+  const pts = conds.map((cd) => D.interpolacao.find((x) => x.conjunto === conjuntoInterp && x.condicao_retirada === cd));
+  const pior = pts.reduce((a, b) => (b.mae_espiras > a.mae_espiras ? b : a));
+  for (const p of pts) {
+    const x = X(p.alfa_real), y = Y(p.alfa_previsto_medio);
+    sv("line", { x1: x, x2: x, y1: Y(Math.min(1, p.alfa_previsto_medio + p.alfa_previsto_dp)), y2: Y(Math.max(0, p.alfa_previsto_medio - p.alfa_previsto_dp)), class: "s1s", "stroke-width": 2, "stroke-linecap": "round" }, s);
+    sv("circle", { cx: x, cy: y, r: 5, class: "s1f ring" }, s);
+    if (p === pior) sv("text", { x: x + 9, y: y + 4, class: "val" }, s, `${p.condicao_retirada}: ${fmt(p.mae_espiras, 1)} espiras`);
+    const hit = sv("circle", { cx: x, cy: y, r: 12, class: "hit" }, s);
+    comDica(hit, () => [{ t: `α previsto ${fmt(p.alfa_previsto_medio, 3)} ± ${fmt(p.alfa_previsto_dp, 3)}`, forte: true, cor: "var(--s1)" },
+                        { t: `${p.condicao_retirada} fora do treino (α real ${fmt(p.alfa_real, 3)})` },
+                        { t: `erro ${fmt(p.mae_espiras, 1)} espiras` }]);
+  }
+}
+
+// ------------------------------------------------------------------ campanha não vista
+function campanha() {
+  const conj = ["trivial", "posicao", "indicadores", "mobilenet", "dinov2", "hibrido"];
+  const conds = D.classes;
+  const campDe = (cd) => D.campanha.find((x) => x.condicao === cd);
+  const grupos = [];
+  conds.forEach((cd, j) => {
+    const r = campDe(cd), g = grupos[grupos.length - 1];
+    if (g && g.id === r.campanha_retirada) g.ate = j;
+    else grupos.push({ id: r.campanha_retirada, de: j, ate: j, fundo: r.tipo === "extrapolacao",
+                       rotulo: `${r.campanha_retirada} · ${r.tipo === "extrapolacao" ? "extrapolação" : "interpolação"}` });
+  });
+  legendaRampa(document.getElementById("lg-camp"), LIM_MAE, "Erro (espiras)", (v) => fmt(v, 0));
+  mapaCalor(document.getElementById("c-camp"), {
+    linhas: conj, colunas: conds, limites: LIM_MAE, grupos,
+    rotuloLinha: (l) => NOMES[l], cabecalho: (c, cw) => (cw < 52 ? c.replace("Healthy", "Saud.").replace("SC", "") : c),
+    valor: (l, c) => D.campanha.find((x) => x.conjunto === l && x.condicao === c)?.mae_espiras,
+    formatar: (v) => fmt(v, 0),
+    dica: (l, c, v) => {
+      const r = D.campanha.find((x) => x.conjunto === l && x.condicao === c);
+      return [{ t: `${fmt(v, 1)} espiras`, forte: true }, { t: `${NOMES[l]} · ${c}, campanha ${r.campanha_retirada} fora do treino` },
+              { t: `α previsto ${fmt(r.alfa_previsto_medio, 3)} (real ${fmt(r.alfa_real, 3)})` },
+              { t: `fora do domínio: ${pct(r.fora_dominio_fracao)}` }];
+    },
+  });
+  tabela(document.getElementById("t-camp"), ["Conjunto", ...conds.map((c) => `${c} (${campDe(c).campanha_retirada})`)],
+    conj.map((l) => [NOMES[l], ...conds.map((c) => fmt(D.campanha.find((x) => x.conjunto === l && x.condicao === c).mae_espiras, 1))]),
+    Array.from({ length: conds.length }, (_, i) => i + 1));
+}
+
+// ------------------------------------------------------------------ explorar imagens
+let selecionada = null;
+function hash(s) { let h = 2166136261; for (const ch of s) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } return ((h >>> 0) % 1000) / 1000; }
+function filtradas() {
+  const fc = document.getElementById("f-cond").value, fk = document.getElementById("f-camp").value;
+  const fr = document.getElementById("f-rec").value, fo = document.getElementById("f-ood").checked;
+  return D.imagens.filter((m) => (!fc || m.condicao === fc) && (!fk || m.campanha === fk) && (!fr || m.rec === fr) && (!fo || m.dominio > 1));
+}
+function prepararFiltros() {
+  const opc = (id, rotulo, valores, nomes = (v) => v) => {
+    const s = document.getElementById(id);
+    s.replaceChildren();
+    el("option", { value: "" }, s, rotulo);
+    for (const v of valores) el("option", { value: v }, s, nomes(v));
+    s.addEventListener("change", explorar);
+  };
+  opc("f-cond", "Todas", D.classes);
+  opc("f-camp", "Todas", [...new Set(D.imagens.map((m) => m.campanha))].sort(), (v) => `Campanha ${v}`);
+  opc("f-rec", "Todas", Object.keys(REC).filter((k) => D.imagens.some((m) => m.rec === k)), (v) => REC[v]);
+  document.getElementById("f-ood").addEventListener("change", explorar);
+}
+function explorar() {
+  const lista = filtradas();
+  document.getElementById("f-count").textContent = `${lista.length} de ${D.imagens.length} imagens`;
+  if (selecionada && !lista.includes(selecionada)) selecionada = null;
+  if (!selecionada && lista.length) selecionada = lista.find((m) => m.arquivo === "p5042.bmp") || lista[0];
+  dispersao(lista);
+  listaImagens(lista);
+  detalhe();
+}
+function dispersao(lista) {
+  const c = document.getElementById("c-scatter");
+  c.replaceChildren();
+  const W = largura(c), H = Math.min(400, Math.max(280, W * 0.42)), m = { l: 44, r: 14, t: 24, b: 34 };
+  const X = (v) => m.l + ((v + 0.05) / 1.1) * (W - m.l - m.r), Y = (v) => H - m.b - ((v + 0.02) / 1.04) * (H - m.t - m.b);
+  const s = sv("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "α previsto contra α declarado para cada imagem" }, c);
+  for (const t of [0, 0.2, 0.4, 0.6, 0.8, 1]) {
+    sv("line", { x1: X(t), x2: X(t), y1: m.t, y2: H - m.b, class: "gl" }, s);
+    sv("line", { x1: m.l, x2: W - m.r, y1: Y(t), y2: Y(t), class: "gl" }, s);
+    sv("text", { x: X(t), y: H - m.b + 16, "text-anchor": "middle", class: "ax" }, s, fmt(t, 1));
+    sv("text", { x: m.l - 6, y: Y(t) + 4, "text-anchor": "end", class: "ax" }, s, fmt(t, 1));
+  }
+  sv("text", { x: W - m.r, y: H - 4, "text-anchor": "end", class: "ax" }, s, "α declarado (com afastamento horizontal)");
+  sv("text", { x: 4, y: 11, class: "ax" }, s, "α previsto");
+  sv("line", { x1: X(0), y1: Y(0), x2: X(1), y2: Y(1), class: "ref" }, s);
+  const jx = (m2) => X(m2.alfa + (hash(m2.arquivo) - 0.5) * 0.045);
+  for (const mm of lista) sv("line", { x1: jx(mm), x2: jx(mm), y1: Y(mm.sup), y2: Y(mm.inf), class: "s1s", "stroke-width": 1, opacity: 0.35 }, s);
+  for (const mm of lista) {
+    const x = jx(mm), y = Y(mm.prev), sel = mm === selecionada;
+    if (mm.dominio > 1) sv("path", { d: `M${x},${y - 7} L${x + 6.5},${y + 5} L${x - 6.5},${y + 5} Z`, class: "warnf ring" }, s);
+    else sv("circle", { cx: x, cy: y, r: sel ? 6 : 4, class: "s1f ring" }, s);
+    if (sel) sv("circle", { cx: x, cy: y, r: 9, fill: "none", stroke: "var(--ink)", "stroke-width": 1.5 }, s);
+    const hit = sv("circle", { cx: x, cy: y, r: 9, class: "hit" }, s);
+    comDica(hit, () => [{ t: `α previsto ${fmt(mm.prev, 3)}`, forte: true, cor: mm.dominio > 1 ? "var(--warning)" : "var(--s1)" },
+                        { t: `${mm.arquivo} · ${mm.condicao} (α ${fmt(mm.alfa, 3)})` },
+                        { t: `intervalo ${fmt(mm.inf, 3)} a ${fmt(mm.sup, 3)} · ${REC[mm.rec]}` }]);
+    hit.addEventListener("click", () => { selecionada = mm; explorar(); });
+  }
+}
+function listaImagens(lista) {
+  const c = document.getElementById("t-imagens");
+  const t = tabela(c, ["Arquivo", "Condição", "Camp.", "α real", "α previsto", "Intervalo 90%", "Domínio", "Recomendação", "Verificador"],
+    [], [3, 4, 6]);
+  const tb = t.querySelector("tbody");
+  for (const mm of lista) {
+    const r = el("tr", { tabindex: 0, "aria-selected": String(mm === selecionada) }, tb);
+    el("td", {}, r, mm.arquivo); el("td", {}, r, mm.condicao); el("td", {}, r, mm.campanha);
+    el("td", { class: "n" }, r, fmt(mm.alfa, 3)); el("td", { class: "n" }, r, fmt(mm.prev, 3));
+    el("td", {}, r, `${fmt(mm.inf, 3)} – ${fmt(mm.sup, 3)}`);
+    el("td", { class: "n" }, r, (mm.dominio > 1 ? "▲ " : "") + fmt(mm.dominio, 2));
+    const cr = el("td", {}, r); chipRec(cr, mm.rec);
+    el("td", { class: mm.aprovado ? "ok" : "fail" }, r, mm.aprovado ? "aprovado" : "reprovado");
+    const escolher = () => { selecionada = mm; explorar(); };
+    r.addEventListener("click", escolher);
+    r.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); escolher(); } });
+  }
+  // Rola só a lista (nunca a página) para deixar a linha selecionada visível.
+  const sel = tb.querySelector('tr[aria-selected="true"]');
+  if (sel) {
+    const topo = sel.offsetTop - t.querySelector("thead").offsetHeight;
+    if (topo < c.scrollTop || sel.offsetTop + sel.offsetHeight > c.scrollTop + c.clientHeight) c.scrollTop = Math.max(0, topo);
+  }
+}
+function chipRec(pai, codigo) {
+  const ch = el("span", { class: `chip ${codigo}` }, pai);
+  el("i", { "aria-hidden": "true" }, ch);
+  el("span", {}, ch, REC[codigo]);
+}
+function detalhe() {
+  const c = document.getElementById("detalhe");
+  c.replaceChildren();
+  if (!selecionada) { el("p", { class: "hint" }, c, "Nenhuma imagem com esses filtros."); return; }
+  const mm = selecionada;
+  const th = el("div", { class: "thumb" }, c);
+  const img = el("img", { src: `../dados/IR_trans_bmp/${mm.pasta}/${mm.arquivo}`, alt: `Termograma ${mm.arquivo}, condição ${mm.condicao}` }, th);
+  img.addEventListener("error", () => { th.replaceChildren(); el("p", {}, th, "Termograma indisponível. Baixe o dataset em dados/IR_trans_bmp/ (veja o README) para ver a imagem aqui."); });
+  const lado = el("div", { style: "display:grid;gap:12px;min-width:0" }, c);
+  const topo = el("div", { class: "row" }, lado);
+  el("strong", {}, topo, mm.arquivo);
+  chipRec(topo, mm.rec);
+  el("span", { class: mm.aprovado ? "ok" : "fail" }, topo, mm.aprovado ? "✓ relatório aprovado pelo verificador" : "✕ relatório reprovado");
+  const dl = el("dl", { class: "kv" }, lado);
+  const kv = (k, v) => { el("dt", {}, dl, k); el("dd", {}, dl, v); };
+  kv("Condição declarada", `${mm.condicao} (α ${fmt(mm.alfa, 3)}, campanha ${mm.campanha})`);
+  kv("α previsto", `${fmt(mm.prev, 3)} ≈ ${Math.round(mm.prev * 600)} espiras`);
+  kv("Intervalo de 90%", `${fmt(mm.inf, 3)} a ${fmt(mm.sup, 3)}`);
+  kv("Erro desta imagem", `${fmt(Math.abs(mm.prev - mm.alfa) * 600, 1)} espiras`);
+  kv("Probabilidade de defeito", fmt(mm.prob, 3));
+  kv("Confiança multiclasse", fmt(mm.conf, 3));
+  kv("Score de domínio", `${fmt(mm.dominio, 2)} ${mm.dominio > 1 ? "▲ fora do domínio" : "(dentro; limiar 1,0)"}`);
+  kv("Coerência visual", fmt(mm.coerencia, 2));
+  const det = el("details", { open: "" }, lado);
+  el("summary", {}, det, "Relatório (modelo de texto fixo)");
+  el("pre", { class: "rel" }, det, mm.relatorio);
+  if (mm.claude) {
+    const dc = el("details", {}, lado);
+    el("summary", {}, dc, `Relatório do Claude (${mm.claude.modelo}) · ${mm.claude.aprovado ? "aprovado" : "reprovado"}`);
+    if (mm.claude.falhas) el("p", { class: "fail" }, dc, mm.claude.falhas);
+    el("pre", { class: "rel" }, dc, mm.claude.texto);
+  }
+}
+
+// ------------------------------------------------------------------ robustez
+let metricaRob = "mae";
+function robustez() {
+  const conj = [...new Set(D.robustez.map((x) => x.conjunto))];
+  const perts = ["nenhuma", "ruido", "desfoque", "translacao", "rotacao"];
+  const cfg = {
+    mae: { campo: "reg_mae_espiras", lim: LIM_MAE, f: (v) => fmt(v, 1), leg: "Erro (espiras)", fl: (v) => fmt(v, 0) },
+    f1: { campo: "mul_f1_macro", lim: [0.5, 0.7, 0.9, 0.95, 0.98, 0.995], f: (v) => fmt(v, 3), leg: "F1-macro", fl: (v) => fmt(v, 2) },
+    ood: { campo: "fora_dominio_fracao", lim: [0.05, 0.1, 0.25, 0.5, 0.75, 0.9], f: (v) => pct(v), leg: "Marcadas fora do domínio", fl: (v) => pct(v) },
+  }[metricaRob];
+  legendaRampa(document.getElementById("lg-rob"), cfg.lim, cfg.leg, cfg.fl);
+  mapaCalor(document.getElementById("c-rob"), {
+    linhas: conj, colunas: perts, limites: cfg.lim, rotuloLinha: (l) => NOMES[l], cabecalho: (c, cw) => (cw < 110 ? PERT[c].split(" ")[0] : PERT[c]),
+    valor: (l, c) => D.robustez.find((x) => x.conjunto === l && x.perturbacao === c)?.[cfg.campo], formatar: cfg.f,
+    dica: (l, c) => {
+      const r = D.robustez.find((x) => x.conjunto === l && x.perturbacao === c);
+      return [{ t: cfg.f(r[cfg.campo]), forte: true }, { t: `${NOMES[l]} · ${PERT[c]}` },
+              { t: `F1 ${fmt(r.mul_f1_macro, 3)} · erro ${fmt(r.reg_mae_espiras, 1)} espiras · fora do domínio ${pct(r.fora_dominio_fracao)}` }];
+    },
+  });
+  tabela(document.getElementById("t-rob"), ["Conjunto", "Perturbação", "F1-macro", "MAE (espiras)", "Fora do domínio"],
+    D.robustez.map((r) => [NOMES[r.conjunto], PERT[r.perturbacao], fmt(r.mul_f1_macro, 3), fmt(r.reg_mae_espiras, 1), pct(r.fora_dominio_fracao)]), [2, 3, 4]);
+}
+
+// ------------------------------------------------------------------ verificador
+function verificador() {
+  const c = document.getElementById("c-verif");
+  c.replaceChildren();
+  const ordem = ["temperatura_inventada", "corrente_inventada", "espiras_recalculadas", "recomendacao_trocada", "limitacoes_omitidas", "numero_alterado", "vida_util_afirmada"];
+  const W = largura(c), rotW = Math.min(190, W * 0.4), lh = 30, H = ordem.length * lh + 24, x0 = rotW + 8, x1 = W - 120;
+  const X = (v) => x0 + v * (x1 - x0);
+  const s = sv("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Porcentagem de erros injetados reprovados pelo verificador" }, c);
+  for (const t of [0, 0.25, 0.5, 0.75, 1]) {
+    sv("line", { x1: X(t), x2: X(t), y1: 0, y2: H - 20, class: "gl" }, s);
+    sv("text", { x: X(t), y: H - 4, "text-anchor": "middle", class: "ax" }, s, pct(t));
+  }
+  sv("line", { x1: x0, x2: x0, y1: 0, y2: H - 20, class: "base" }, s);
+  ordem.forEach((k, i) => {
+    const r = D.verificador.find((x) => x.mutacao === k); if (!r) return;
+    const y = i * lh + 6;
+    sv("text", { x: rotW, y: y + 13, "text-anchor": "end", class: "lab" }, s, MUT[k]);
+    if (r.reprovados > 0) sv("path", { d: barra(x0, y + 2, Math.max(1, X(r.reprovados) - x0), 16), class: "s1f" }, s);
+    const rot = r.reprovados > 0 ? `${pct(r.reprovados, 1)} reprovados` : `alerta em ${pct(r.com_alerta)}`;
+    sv("text", { x: X(r.reprovados) + 6, y: y + 14, class: "val" }, s, rot);
+    const hit = sv("rect", { x: x0, y, width: x1 - x0, height: 20, class: "hit" }, s);
+    comDica(hit, () => [{ t: pct(r.reprovados, 1), forte: true, cor: "var(--s1)" }, { t: `${MUT[k]} · ${r.n} relatórios` }, { t: `com alerta: ${pct(r.com_alerta)}` }]);
+  });
+  tabela(document.getElementById("t-verif"), ["Erro injetado", "Relatórios", "Reprovados", "Com alerta"],
+    ordem.map((k) => D.verificador.find((x) => x.mutacao === k)).filter(Boolean).map((r) => [MUT[r.mutacao], String(r.n), pct(r.reprovados, 1), pct(r.com_alerta)]), [1, 2, 3]);
+}
+
+// ------------------------------------------------------------------ montagem
+function alternar(ids, aoMudar) {
+  for (const [id, valor] of ids) {
+    document.getElementById(id).addEventListener("click", () => {
+      for (const [outro] of ids) document.getElementById(outro).setAttribute("aria-pressed", String(outro === id));
+      aoMudar(valor);
+    });
+  }
+}
+function tudo() { tiles(); validacao(); interpolacao(); campanha(); explorar(); robustez(); verificador(); }
+
+if (!D) {
+  document.querySelector(".page").replaceChildren(el("p", {}, null, "Dados ausentes: gere o painel com gerar_painel.py."));
+} else {
+  alternar([["v-f1", "f1"], ["v-mae", "mae"]], (v) => { metricaVal = v; validacao(); });
+  alternar([["r-mae", "mae"], ["r-f1", "f1"], ["r-ood", "ood"]], (v) => { metricaRob = v; robustez(); });
+  prepararFiltros();
+  tudo();
+  let espera;
+  addEventListener("resize", () => { clearTimeout(espera); espera = setTimeout(tudo, 150); });
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", tudo);
+  new MutationObserver(tudo).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  addEventListener("scroll", esconder, { passive: true });
+  const v = D.versoes;
+  document.getElementById("rodape").textContent =
+    `Gerado em ${D.gerado_em} a partir de saida/ · Python ${String(v.python).split(" ")[0]}, scikit-learn ${v.sklearn}, torch ${v.torch}, semente ${v.semente} · DINOv2: ${v.fonte_dinov2} · Dataset: Najafi, Baleghi e Mirimani, Mendeley Data, 2020.`;
+}
+</script>
+</body>
+</html>
